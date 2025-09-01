@@ -1,4 +1,9 @@
 package org.example.demoqa.pages;
 
-public class AlertsFrameWindowsPage {
+import com.microsoft.playwright.Page;
+
+public class AlertsFrameWindowsPage extends BasePage {
+    public AlertsFrameWindowsPage(Page page) {
+        super(page);
+    }
 }

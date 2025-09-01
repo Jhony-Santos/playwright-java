@@ -1,4 +1,7 @@
 package org.example.demoqa.pages;
 
-public class WidgetsPage {
+import com.microsoft.playwright.Page;
+
+public class WidgetsPage extends BasePage {
+    public WidgetsPage(Page page) { super(page); }
 }

@@ -14,7 +14,9 @@ public class BaseTest {
         playwright = Playwright.create();
         // deixe visível para enxergar o site; mude para true quando quiser headless
         browser = playwright.chromium().launch(
-                new BrowserType.LaunchOptions().setHeadless(false)
+                new BrowserType.LaunchOptions()
+                        .setHeadless(false)
+                        .setSlowMo(600)
         );
     }
 
