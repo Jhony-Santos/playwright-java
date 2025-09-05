@@ -19,7 +19,7 @@ public class BaseTest {
                         .setSlowMo(600)
         );
     }
-
+    @Tes
     @AfterAll
     static void afterAll() {
         if (browser != null) browser.close();

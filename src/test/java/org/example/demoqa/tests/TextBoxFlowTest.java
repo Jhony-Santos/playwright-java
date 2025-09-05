@@ -14,4 +14,14 @@ public class TextBoxFlowTest extends BaseTest {
                 .submit()
                 .assertOutputContains("Jhonatan Santos", "jhony.jpn@gmail.com");
     }
+    @Test
+    void fluxo_TextBox2() {
+        new HomePage(page)
+                .gotoHome()
+                .openElements()
+                .openTextBox()
+                .fillForm("Rafael Santos", "jhony.jpn@gmail.com", "Rua das Flores, 123", "Curitiba - PR")
+                .submit()
+                .assertOutputContains("Rafael Santos", "jhony.jpn@gmail.com");
+    }
 }
