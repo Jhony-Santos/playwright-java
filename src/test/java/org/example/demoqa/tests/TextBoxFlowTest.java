@@ -1,27 +1,44 @@
 package org.example.demoqa.tests;
+
 import org.example.demoqa.BaseTest;
 import org.example.demoqa.pages.HomePage;
+import org.example.demoqa.pages.TextBoxPage;
+import org.example.demoqa.data.TextBoxDataFactory;
+import org.example.demoqa.models.TextBoxData;
+
 import org.junit.jupiter.api.Test;
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class TextBoxFlowTest extends BaseTest {
+
     @Test
-    void fluxo_TextBox() {
-        new HomePage(page)
+    void shouldSubmitTextBoxWithValidData() {
+        TextBoxData data = TextBoxDataFactory.valid();
+
+        TextBoxPage textBox = new HomePage(page)
                 .gotoHome()
                 .openElements()
-                .openTextBox()
-                .fillForm("Jhonatan Santos", "jhony.jpn@gmail.com", "Rua das Flores, 123", "Curitiba - PR")
-                .submit()
-                .assertOutputContains("Jhonatan Santos", "jhony.jpn@gmail.com");
+                .openTextBox();
+
+        textBox.fillForm(data).submit();
+
+        assertThat(textBox.outputBox()).isVisible();
+        assertThat(textBox.outputBox()).containsText(data.name());
+        assertThat(textBox.outputBox()).containsText(data.email());
     }
+
     @Test
-    void fluxo_TextBox2() {
-        new HomePage(page)
+    void shouldSubmitTextBoxWithAnotherValidData() {
+        TextBoxData data = TextBoxDataFactory.anotherValid();
+
+        TextBoxPage textBox = new HomePage(page)
                 .gotoHome()
                 .openElements()
-                .openTextBox()
-                .fillForm("Rafael Santos", "jhony.jpn@gmail.com", "Rua das Flores, 123", "Curitiba - PR")
-                .submit()
-                .assertOutputContains("Rafael Santos", "jhony.jpn@gmail.com");
+                .openTextBox();
+
+        textBox.fillForm(data).submit();
+
+        assertThat(textBox.outputBox()).containsText(data.name());
+        assertThat(textBox.outputBox()).containsText(data.email());
     }
 }

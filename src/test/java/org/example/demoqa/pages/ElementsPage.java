@@ -1,32 +1,37 @@
 package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Page;
+import org.example.demoqa.pages.components.SideMenuComponent;
 
 public class ElementsPage extends BasePage {
-    public ElementsPage(Page page) { super(page); }
+    private final SideMenuComponent sideMenu;
+
+    public ElementsPage(Page page) {
+        super(page);
+        this.sideMenu = new SideMenuComponent(page);
+    }
 
     public TextBoxPage openTextBox() {
-        clickMenuByText("Text Box");
+        sideMenu.openItem("Text Box");
         page.waitForURL("**/text-box");
         return new TextBoxPage(page);
     }
 
     public CheckBoxPage openCheckBox() {
-        clickMenuByText("Check Box");
+        sideMenu.openItem("Check Box");
         page.waitForURL("**/checkbox");
         return new CheckBoxPage(page);
     }
 
     public RadioButtonPage openRadioButton() {
-        clickMenuByText("Radio Button");
+        sideMenu.openItem("Radio Button");
         page.waitForURL("**/radio-button");
         return new RadioButtonPage(page);
     }
+
     public WebTablesPage openWebTables() {
-        clickMenuByText("Web Tables");
+        sideMenu.openItem("Web Tables");
         page.waitForURL("**/webtables");
         return new WebTablesPage(page);
     }
-
-
 }
