@@ -56,8 +56,14 @@ public class PracticeFormPage extends BasePage {
     }
 
     // ---------- Helpers ----------
-    private Locator genderLabel(String value)  { return page.locator("label[for='gender-radio-"    + value + "']"); }
-    private Locator hobbyLabel(String value)   { return page.locator("label[for='hobbies-checkbox-" + value + "']"); }
+    private Locator genderLabel(String value)  {
+        return page.locator("label[for='gender-radio-"    + value + "']");
+    }
+
+
+    private Locator hobbyLabel(String value)   {
+        return page.locator("label[for='hobbies-checkbox-" + value + "']");
+    }
 
     // ---------- Actions (fluent) ----------
     public PracticeFormPage fillFirstName(String first)   { firstNameInput.fill(first); return this; }

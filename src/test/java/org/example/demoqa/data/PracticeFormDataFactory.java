@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class PracticeFormDataFactory {
+
     private PracticeFormDataFactory() {}
 
     public static PracticeFormData validStudent(Path pictureOrNull) {

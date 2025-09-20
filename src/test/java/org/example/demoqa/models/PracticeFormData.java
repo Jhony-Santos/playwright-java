@@ -10,14 +10,14 @@ public record PracticeFormData(
         String lastName,
         String email,
         String mobile,
-        LocalDate dateOfBirth,        // ex.: LocalDate.of(2000, 1, 1)
-        List<String> subjects,        // ex.: List.of("Maths", "English")
-        Set<Hobby> hobbies,           // ex.: Set.of(Hobby.SPORTS, Hobby.MUSIC)
-        Gender gender,                // MALE, FEMALE, OTHER
+        LocalDate dateOfBirth,
+        List<String> subjects,
+        Set<Hobby> hobbies,
+        Gender gender,
         String address,
-        String state,                 // ex.: "NCR"
-        String city,                  // ex.: "Delhi"
-        Path picture                  // pode ser null se não quiser upload
+        String state,
+        String city,
+        Path picture
 ) {
     public enum Gender { MALE, FEMALE, OTHER }
     public enum Hobby  { SPORTS, READING, MUSIC }
