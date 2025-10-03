@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -17,7 +18,7 @@ public class PracticeFormPage extends BasePage {
     public enum Hobby  { SPORTS, READING, MUSIC }
 
     // ---------- Locators ----------
-    private final Locator firstNameInput;
+    private Locator firstNameInput;
     private final Locator lastNameInput;
     private final Locator emailInput;
     private final Locator mobileInput;
@@ -37,15 +38,15 @@ public class PracticeFormPage extends BasePage {
     // ---------- Ctor ----------
     public PracticeFormPage(Page page) {
         super(page);
-        this.firstNameInput     = page.locator("#firstName");
-        this.lastNameInput      = page.locator("#lastName");
-        this.emailInput         = page.locator("#userEmail");
-        this.mobileInput        = page.locator("#userNumber");
-        this.dobInput           = page.locator("#dateOfBirthInput");
-        this.subjectsInput      = page.locator("#subjectsInput");
-        this.addressTextArea    = page.locator("#currentAddress");
+        this.firstNameInput = page.locator("#firstName");
+        this.lastNameInput  = page.locator("#lastName");
+        this.emailInput = page.locator("#userEmail");
+        this.mobileInput = page.locator("#userNumber");
+        this.dobInput = page.locator("#dateOfBirthInput");
+        this.subjectsInput = page.locator("#subjectsInput");
+        this.addressTextArea = page.locator("#currentAddress");
         this.uploadPictureInput = page.locator("#uploadPicture");
-        this.submitButton       = page.locator("#submit");
+        this.submitButton  = page.locator("#submit");
 
         this.stateInput         = page.locator("#react-select-3-input");
         this.cityInput          = page.locator("#react-select-4-input");
@@ -73,18 +74,31 @@ public class PracticeFormPage extends BasePage {
 
     /** Define a data exatamente como o input exibe (ex.: "18 Sep 2025"). */
     public PracticeFormPage setDateOfBirth(String valueAsShown) {
-        dobInput.click();
-        dobInput.press("Control+A"); // no macOS pode ser "Meta+A"
-        dobInput.press("Delete");
-        dobInput.fill(valueAsShown);
-        dobInput.press("Enter");
-        return this;
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
+        LocalDate date = LocalDate.parse(valueAsShown, fmt);
+        return setDateOfBirth(date);
     }
 
     /** Versão tipada. */
     public PracticeFormPage setDateOfBirth(LocalDate date) {
-        String formatted = date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-        return setDateOfBirth(formatted);
+        // abre o datepicker
+        dobInput.click();
+
+        // seleciona mês e ano (os selects nativos do datepicker do DemoQA)
+        Locator monthSelect = page.locator(".react-datepicker__month-select");
+        Locator yearSelect  = page.locator(".react-datepicker__year-select");
+
+        // month-select aceita valores 0..11
+        monthSelect.selectOption(String.valueOf(date.getMonthValue() - 1));
+        yearSelect.selectOption(String.valueOf(date.getYear()));
+
+        // escolhe o dia, evitando dias da outra folha do calendário
+        String day = String.format("%02d", date.getDayOfMonth());
+        page.locator(".react-datepicker__day--0" + day + ":not(.react-datepicker__day--outside-month)")
+                .first()
+                .click();
+
+        return this;
     }
 
     public PracticeFormPage addSubject(String subject) {

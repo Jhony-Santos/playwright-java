@@ -37,7 +37,7 @@ public class PracticeFormTest extends BaseTest {
                 .openPracticeForm();
 
         var data = PracticeFormDataFactory.validStudent(
-                resourcePath("files/photo.png") // ou null se não quiser upload
+                resourcePath("files/photo.jpg") // ou null se não quiser upload
         );
 
         PracticeFormSteps.fillForm(form, data);
