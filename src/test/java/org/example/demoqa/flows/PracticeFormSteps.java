@@ -1,6 +1,6 @@
 package org.example.demoqa.flows;
 
-import org.example.demoqa.models.PracticeFormData;
+import org.example.demoqa.data.models.PracticeFormData;
 import org.example.demoqa.pages.PracticeFormPage;
 
 public final class PracticeFormSteps {

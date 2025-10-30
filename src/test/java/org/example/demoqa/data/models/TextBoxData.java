@@ -1,4 +1,4 @@
-package org.example.demoqa.models;
+package org.example.demoqa.data.models;
 
 public record TextBoxData(
         String name,

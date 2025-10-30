@@ -2,7 +2,7 @@ package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import org.example.demoqa.models.TextBoxData;
+import org.example.demoqa.data.models.TextBoxData;
 
 import static com.microsoft.playwright.options.AriaRole.BUTTON;
 

@@ -28,12 +28,21 @@ public class BaseTest {
 
     @BeforeEach
     void createContext() {
-        context = browser.newContext();
+        context = browser.newContext(
+                new Browser.NewContextOptions()
+                        .setViewportSize(1600, 1000) // largura suficiente para mostrar o left-pannel
+        );
         page = context.newPage();
+        page.setDefaultTimeout(10000);// opcional: 10s p/ acelerar feedback
     }
 
     @AfterEach
     void closeContext() {
         if (context != null) context.close();
     }
+
+
+
+
+
 }

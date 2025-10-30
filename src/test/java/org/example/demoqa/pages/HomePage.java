@@ -1,16 +1,47 @@
 package org.example.demoqa.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Page.GetByRoleOptions;
-import static com.microsoft.playwright.options.AriaRole.HEADING;
+import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.WaitForSelectorState;
+import com.microsoft.playwright.options.WaitUntilState;
+
 
 public class HomePage extends BasePage {
+
+    private static final String BASE_URL = "https://demoqa.com/";
+
     public HomePage(Page page) { super(page); }
 
     public HomePage gotoHome() {
-        page.navigate("https://demoqa.com/");
+
+        //page.navigate(BASE_URL);
+        //page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        page.navigate(
+                BASE_URL,
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
+        );
+
+        // 3) Âncora da página: o card "Elements"
+        Locator elementsHeading = page.getByRole(
+                AriaRole.HEADING,
+                new Page.GetByRoleOptions().setName("Elements")
+        );
+
+        // 4) Garante que está visível antes de interagir
+        elementsHeading.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE));
+
+        // 5) Evita click interceptado por overlays/ad placeholders
+
+        removeObstructions();
+        elementsHeading.scrollIntoViewIfNeeded();
+
         return this;
     }
+
 
     public ElementsPage openElements() {
         clickHeading("Elements");
@@ -19,7 +50,7 @@ public class HomePage extends BasePage {
     }
 
     private void openCard(String headingText, String urlSuffix) {
-        page.getByRole(HEADING, new GetByRoleOptions().setName(headingText)).click();
+        page.getByRole(AriaRole.HEADING, new GetByRoleOptions().setName(headingText)).click();
         page.waitForURL("**/" + urlSuffix);
     }
 
@@ -39,7 +70,6 @@ public class HomePage extends BasePage {
         openCard("Widgets", "widgets");
         return new WidgetsPage(page);
     }
-
 
 
 }

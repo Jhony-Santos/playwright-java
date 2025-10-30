@@ -1,6 +1,6 @@
 package org.example.demoqa.data;
 
-import org.example.demoqa.models.TextBoxData;
+import org.example.demoqa.data.models.TextBoxData;
 
 public final class TextBoxDataFactory {
     private TextBoxDataFactory() {}

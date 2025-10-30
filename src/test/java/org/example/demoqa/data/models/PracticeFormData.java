@@ -1,4 +1,4 @@
-package org.example.demoqa.models;
+package org.example.demoqa.data.models;
 
 import java.nio.file.Path;
 import java.time.LocalDate;

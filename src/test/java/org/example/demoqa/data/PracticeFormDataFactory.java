@@ -1,8 +1,8 @@
 package org.example.demoqa.data;
 
-import org.example.demoqa.models.PracticeFormData;
-import org.example.demoqa.models.PracticeFormData.Gender;
-import org.example.demoqa.models.PracticeFormData.Hobby;
+import org.example.demoqa.data.models.PracticeFormData;
+import org.example.demoqa.data.models.PracticeFormData.Gender;
+import org.example.demoqa.data.models.PracticeFormData.Hobby;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -32,7 +32,7 @@ public final class PracticeFormDataFactory {
 
     public static PracticeFormData multipleSubjectsAndHobbies() {
         return new PracticeFormData(
-                "Rafael",
+                "ALLAN",
                 "Santos",
                 "rafael.santos@example.com",
                 "8888888888",

@@ -4,7 +4,7 @@ import org.example.demoqa.BaseTest;
 import org.example.demoqa.pages.HomePage;
 import org.example.demoqa.pages.TextBoxPage;
 import org.example.demoqa.data.TextBoxDataFactory;
-import org.example.demoqa.models.TextBoxData;
+import org.example.demoqa.data.models.TextBoxData;
 
 import org.junit.jupiter.api.Test;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;

@@ -18,7 +18,7 @@ public class PracticeFormPage extends BasePage {
     public enum Hobby  { SPORTS, READING, MUSIC }
 
     // ---------- Locators ----------
-    private Locator firstNameInput;
+    private final Locator firstNameInput;
     private final Locator lastNameInput;
     private final Locator emailInput;
     private final Locator mobileInput;
@@ -69,7 +69,23 @@ public class PracticeFormPage extends BasePage {
     // ---------- Actions (fluent) ----------
     public PracticeFormPage fillFirstName(String first)   { firstNameInput.fill(first); return this; }
     public PracticeFormPage fillLastName(String last)     { lastNameInput.fill(last);   return this; }
-    public PracticeFormPage fillEmail(String email)       { emailInput.fill(email);     return this; }
+
+    public PracticeFormPage fillEmail(String email){
+        emailInput.fill(email);
+        emailInput.dispatchEvent("blur"); // força validação por blur
+        return this;
+
+    }
+
+
+    public boolean emailTypeMismatch() {
+        // reportValidity força o browser a avaliar e mostrar a mensagem
+        return (Boolean) emailInput.evaluate("el => { el.reportValidity(); return el.validity.typeMismatch; }");
+    }
+
+
+
+
     public PracticeFormPage fillMobile(String mobile)     { mobileInput.fill(mobile);   return this; }
 
     /** Define a data exatamente como o input exibe (ex.: "18 Sep 2025"). */
@@ -169,15 +185,141 @@ public class PracticeFormPage extends BasePage {
         return this;
     }
 
+//    public PracticeFormPage submit() {
+//        submitButton.click();
+//        // espera pelo modal para reduzir flakiness
+//        assertThat(resultModalTitle).isVisible();
+//        return this;
+//    }
+
+    private void waitModalOpen() {
+        resultModalTitle.waitFor(new Locator.WaitForOptions()
+                .setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+    }
+
     public PracticeFormPage submit() {
         submitButton.click();
-        // espera pelo modal para reduzir flakiness
-        assertThat(resultModalTitle).isVisible();
+        waitModalOpen();
         return this;
     }
 
     // ---------- Exposições para asserts ----------
     public Locator resultModalTitle() { return resultModalTitle; }
+
+
     public Locator resultModal()      { return resultModal; }
-    public PracticeFormPage closeResultModal() { closeLargeModal.click(); return this; }
+
+
+    public PracticeFormPage closeResultModal() {
+
+
+        waitModalOpen();  // garante que o modal abriu mesmo
+
+
+        removeObstructions(); // remove qualquer overlay/banner que possa interceptar o click
+        closeLargeModal.scrollIntoViewIfNeeded();  // evita “element click intercepted”
+        closeLargeModal.click();
+
+        resultModalTitle.waitFor(new Locator.WaitForOptions()  // espera o modal realmente sumir (pode ser HIDDEN ou DETACHED)
+                .setState(com.microsoft.playwright.options.WaitForSelectorState.DETACHED));
+
+
+        return this;
+
+    }
+
+
+
+    public PracticeFormPage trySubmit() {
+        submitButton.click(); // não espera o modal (bom para testes negativos)
+        return this;
+    }
+
+    public boolean formIsSubmitted() {
+        return resultModalTitle.isVisible(); // true só quando passou por todas validações
+    }
+
+    private Locator genderAnyRadio() {  // um dos radios; todos compartilham required
+        return page.locator("#gender-radio-1");
+    }
+
+    public boolean isRequiredFirstName() {
+        return (Boolean) firstNameInput.evaluate("el => !!el.required");
+    }
+
+    public boolean isRequiredLastName() {
+        return (Boolean) lastNameInput.evaluate("el => !!el.required");
+    }
+
+    public boolean isRequiredGender() {
+        return (Boolean) genderAnyRadio().evaluate("el => !!el.required");
+    }
+
+    public boolean isRequiredMobile() {
+        return (Boolean) mobileInput.evaluate("el => !!el.required");
+    }
+
+    private boolean validity(Locator el, String prop) {
+        return (Boolean) el.evaluate("(el, prop) => el.validity[prop]", prop);
+    }
+
+    public boolean firstNameValidity(String prop) {
+        return validity(firstNameInput, prop);
+    }
+
+    public boolean lastNameValidity(String prop) {
+        return validity(lastNameInput, prop);
+    }
+
+    public boolean genderValidity(String prop) {
+        return validity(genderAnyRadio(), prop);
+    }
+
+    public boolean mobileValidity(String prop) {
+        return validity(mobileInput, prop);
+    }
+    public String firstNameValidationMessage() {
+        return (String) firstNameInput.evaluate("el => el.validationMessage");
+    }
+    public String lastNameValidationMessage() {
+        return (String) lastNameInput.evaluate("el => el.validationMessage");
+    }
+    public String genderValidationMessage() {
+        return (String) genderAnyRadio().evaluate("el => el.validationMessage");
+    }
+    public String mobileValidationMessage() {
+        return (String) mobileInput.evaluate("el => el.validationMessage");
+    }
+
+
+    // PracticeFormPage.java (novos utilitários de e-mail)
+
+    private boolean validityWithReport(Locator el, String prop) {
+        return (Boolean) el.evaluate("(el, prop) => { el.reportValidity(); return el.validity[prop]; }", prop);
+    }
+
+    public boolean emailValidity(String prop) {
+        return validityWithReport(emailInput, prop);
+    }
+    public String emailValidationMessage() {
+        return (String) emailInput.evaluate("el => el.validationMessage");
+
+    }
+
+
+    public String mobileValue() {
+        return mobileInput.inputValue(); // usa API nativa do Playwright
+    }
+
+
+    public String firstNameValue() {
+        return firstNameInput.inputValue();
+    }
+
+
+    public String lastNameValue()  {
+        return lastNameInput.inputValue();
+    }
+
+
 }

@@ -20,6 +20,16 @@ public class BasePage {
         page.getByText(text,new Page.GetByTextOptions().setExact(true)).click();
     }
 
+    // BasePage.java
+    protected void removeObstructions() {
+        page.evaluate("() => {" +
+                "const hide = sel => { const el = document.querySelector(sel); if (el) el.remove(); };" +
+                "hide('#fixedban');" +     // remove banner fixo de anúncios
+                "hide('footer');" +        // remove rodapé que às vezes cobre botões
+                "}");
+    }
+
+
 
 
 }
