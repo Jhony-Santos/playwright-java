@@ -1,6 +1,6 @@
 
 
-Feature: Practice Form - validações HTML5
+Feature: Practice Form
 
   Background:
     Given que estou na página "Practice Form"

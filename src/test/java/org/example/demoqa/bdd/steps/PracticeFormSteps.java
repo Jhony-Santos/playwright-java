@@ -1,63 +1,88 @@
 package org.example.demoqa.bdd.steps;
 
-import io.cucumber.java.en.*;
-import org.example.demoqa.BaseTest;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.pt.*;
+import org.example.demoqa.bdd.World;
 import org.example.demoqa.pages.HomePage;
 import org.example.demoqa.pages.PracticeFormPage;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class PracticeFormSteps extends BaseTest {
+public class PracticeFormSteps {
+
+    private final World w;
     private PracticeFormPage form;
 
-    @Given("que estou na página {string}")
-    public void queEstouNaPagina(String name) {
-        // navega até o Practice Form pela Home
-        form = new HomePage(page).gotoHome().openForms().openPracticeForm();
+    public PracticeFormSteps(World world) {
+        this.w = world;
     }
 
-    @When("eu preencho o email com {string}")
-    public void euPreenchoEmail(String email) {
+    // ---------- Background / Navegação ----------
+    @Given("que estou na página {string}")
+    public void queEstouNaPagina(String pagina) {
+        if ("Practice Form".equalsIgnoreCase(pagina)) {
+            form = new HomePage(w.page)
+                    .gotoHome()
+                    .openForms()
+                    .openPracticeForm();
+        } else {
+            throw new IllegalArgumentException("Página não suportada no step: " + pagina);
+        }
+    }
+
+    // ---------- E-mail inválido ----------
+    @Quando("eu preencho o email com {string}")
+    public void euPreenchoOEmailCom(String email) {
         form.fillEmail(email);
     }
 
-    @When("eu preencho o mobile com {string}")
-    public void euPreenchoMobile(String mobile) {
-        form.fillMobile(mobile);
-    }
-
-    @When("eu clico em Submit")
+    @E("eu clico em Submit")
     public void euClicoEmSubmit() {
-        form.trySubmit(); // não espera modal (bom p/ negativos)
+        // Em cenários negativos não queremos esperar o modal ⇒ trySubmit()
+        form.trySubmit();
     }
 
-    @Then("o campo email deve estar {string}")
-    public void campoEmailDeveEstar(String validity) {
-        assertTrue(form.emailValidity(validity));
+    @Entao("o campo email deve estar {string}")
+    public void oCampoEmailDeveEstar(String validityProp) {
+        // Ex.: "typeMismatch"
+        assertTrue(form.emailValidity(validityProp),
+                () -> "Esperava validity." + validityProp + " = true para o e-mail");
     }
 
-    @Then("o campo mobile deve estar {string}")
-    public void campoMobileDeveEstar(String validity) {
-        assertTrue(form.mobileValidity(validity));
+    @E("o formulário não deve ser submetido")
+    public void oFormularioNaoDeveSerSubmetido() {
+        assertFalse(form.formIsSubmitted(), "O formulário não deveria ter sido submetido");
     }
 
-    @Then("o formulário não deve ser submetido")
-    public void formularioNaoDeveSerSubmetido() {
-        assertFalse(form.formIsSubmitted());
+    // ---------- Mobile inválido (Scenario Outline) ----------
+    @Quando("eu preencho o mobile com {string}")
+    public void euPreenchoOMobileCom(String valor) {
+        form.fillMobile(valor);
     }
 
-    @When("eu preencho os campos obrigatórios corretamente")
-    public void preenchoObrigatorios() {
-        form.fillFirstName("Ana")
+    @Entao("o campo mobile deve estar {string}")
+    public void oCampoMobileDeveEstar(String validityProp) {
+        // Ex.: "tooShort" ou "patternMismatch"
+        assertTrue(form.mobileValidity(validityProp),
+                () -> "Esperava validity." + validityProp + " = true para o mobile");
+    }
+
+
+
+    // ---------- Happy path ----------
+    @Quando("eu preencho os campos obrigatórios corretamente")
+    public void euPreenchoOsCamposObrigatoriosCorretamente() {
+        form
+                .fillFirstName("Ana")
                 .fillLastName("Silva")
                 .selectGender("Female")
                 .fillMobile("9998887766")
-                .submit();
+                .submit(); // aqui esperamos abrir o modal
     }
 
-    @Then("o modal de sucesso deve aparecer")
-    public void modalSucessoAparece() {
+    @Entao("o modal de sucesso deve aparecer")
+    public void oModalDeSucessoDeveAparecer() {
         assertThat(form.resultModalTitle()).hasText("Thanks for submitting the form");
         form.closeResultModal();
     }

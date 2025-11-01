@@ -12,7 +12,7 @@ import static io.cucumber.junit.platform.engine.Constants.GLUE_PROPERTY_NAME;
 @SelectClasspathResource("features") // olha para src/test/resources/features
 @ConfigurationParameter(
         key = GLUE_PROPERTY_NAME,
-        value = "org.example.demoqa.bdd.steps" // pacote dos seus step definitions
+        value = "org.example.demoqa.bdd" // pacote dos seus step definitions
 )
 @ConfigurationParameter(
         key = PLUGIN_PROPERTY_NAME,
