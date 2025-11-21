@@ -48,7 +48,7 @@ public class PracticeFormPage extends BasePage {
         this.uploadPictureInput = page.locator("#uploadPicture");
         this.submitButton  = page.locator("#submit");
 
-        this.stateInput         = page.locator("#react-select-3-input");
+        this.stateInput         =    page.locator("#react-select-3-input");
         this.cityInput          = page.locator("#react-select-4-input");
 
         this.resultModalTitle   = page.locator("#example-modal-sizes-title-lg");

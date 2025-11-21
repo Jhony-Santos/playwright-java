@@ -5,6 +5,7 @@ import io.cucumber.java.pt.*;
 import org.example.demoqa.bdd.World;
 import org.example.demoqa.pages.HomePage;
 import org.example.demoqa.pages.PracticeFormPage;
+import org.junit.jupiter.api.Test;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;

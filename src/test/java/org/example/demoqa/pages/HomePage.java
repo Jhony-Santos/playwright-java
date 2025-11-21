@@ -16,36 +16,26 @@ public class HomePage extends BasePage {
 
     public HomePage gotoHome() {
 
-        //page.navigate(BASE_URL);
-        //page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         page.navigate(
                 BASE_URL,
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
         );
 
-        // 3) Âncora da página: o card "Elements"
-        Locator elementsHeading = page.getByRole(
-                AriaRole.HEADING,
-                new Page.GetByRoleOptions().setName("Elements")
-        );
-
-        // 4) Garante que está visível antes de interagir
-        elementsHeading.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE));
-
-        // 5) Evita click interceptado por overlays/ad placeholders
-
+        // remove overlays / ads se o seu BasePage tiver isso
         removeObstructions();
-        elementsHeading.scrollIntoViewIfNeeded();
 
         return this;
     }
 
 
     public ElementsPage openElements() {
-        clickHeading("Elements");
-        page.waitForURL("**/elements");
+        page.navigate(
+                BASE_URL + "elements",
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
+        );
+
+        removeObstructions();
         return new ElementsPage(page);
     }
 
@@ -70,6 +60,21 @@ public class HomePage extends BasePage {
         openCard("Widgets", "widgets");
         return new WidgetsPage(page);
     }
+
+    public InteractionsPage openInteractions() {
+        openCard("Interactions", "interaction");
+        return new InteractionsPage(page);
+    }
+
+    public BookStoreApplicationPage openBookStoreApplication() {
+        openCard("Book Store Application", "books");
+        return new BookStoreApplicationPage(page);
+    }
+
+
+
+
+
 
 
 }

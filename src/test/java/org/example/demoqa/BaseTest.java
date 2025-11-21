@@ -34,6 +34,7 @@ public class BaseTest {
         );
         page = context.newPage();
         page.setDefaultTimeout(10000);// opcional: 10s p/ acelerar feedback
+        page.setDefaultNavigationTimeout(45000);
     }
 
     @AfterEach
