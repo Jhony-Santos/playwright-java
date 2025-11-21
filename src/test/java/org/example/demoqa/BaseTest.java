@@ -3,38 +3,45 @@ package org.example.demoqa;
 import com.microsoft.playwright.*;
 import org.junit.jupiter.api.*;
 
+import java.util.List;
+
 public class BaseTest {
     protected static Playwright playwright;
     protected static Browser browser;
     protected BrowserContext context;
     protected Page page;
 
+    // Flag para modo debug (padrão = true)
+    private static final boolean DEBUG =
+            Boolean.parseBoolean(System.getProperty("debug", "true"));
+
     @BeforeAll
     static void beforeAll() {
         playwright = Playwright.create();
-        // deixe visível para enxergar o site; mude para true quando quiser headless
+
         browser = playwright.chromium().launch(
                 new BrowserType.LaunchOptions()
-                        .setHeadless(false)
-                        .setSlowMo(600)
+                        .setHeadless(!DEBUG)             // janela visível só em debug
+                        .setSlowMo(DEBUG ? 800 : 0)      // mais lento pra enxergar
+                        // abre a janela maximizada no monitor atual
+                        .setArgs(List.of("--start-maximized"))
         );
-    }
-
-    @AfterAll
-    static void afterAll() {
-        if (browser != null) browser.close();
-        if (playwright != null) playwright.close();
     }
 
     @BeforeEach
     void createContext() {
+        // 👇 MUITO IMPORTANTE:
+        // null => Playwright NÃO força um viewport fixo
+        // e passa a usar exatamente o tamanho da janela (maximizada)
         context = browser.newContext(
                 new Browser.NewContextOptions()
-                        .setViewportSize(1600, 1000) // largura suficiente para mostrar o left-pannel
+                        .setViewportSize(null)
         );
+
         page = context.newPage();
-        page.setDefaultTimeout(10000);// opcional: 10s p/ acelerar feedback
-        page.setDefaultNavigationTimeout(45000);
+
+        page.setDefaultTimeout(DEBUG ? 15000 : 8000);
+        page.setDefaultNavigationTimeout(DEBUG ? 45000 : 20000);
     }
 
     @AfterEach
@@ -42,8 +49,9 @@ public class BaseTest {
         if (context != null) context.close();
     }
 
-
-
-
-
+    @AfterAll
+    static void afterAll() {
+        if (browser != null) browser.close();
+        if (playwright != null) playwright.close();
+    }
 }

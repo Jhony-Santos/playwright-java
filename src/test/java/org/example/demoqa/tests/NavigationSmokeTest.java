@@ -1,7 +1,7 @@
 package org.example.demoqa.tests;
 
-import com.microsoft.playwright.assertions.PlaywrightAssertions;
 import org.example.demoqa.BaseTest;
+import org.example.demoqa.pages.ElementsPage;
 import org.example.demoqa.pages.HomePage;
 import org.junit.jupiter.api.Test;
 
@@ -10,38 +10,21 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 public class NavigationSmokeTest extends BaseTest {
 
     @Test
-    void shouldOpenAllMainSectionsFromHome() {
+    void shouldOpenAllMainSectionsFromElementsAccordion() {
+        // 1) entra na home
         HomePage home = new HomePage(page).gotoHome();
 
-        // Elements
-        home.openElements();
-        assertThat(page).hasURL("**/elements");
+        // 2) abre Elements (primeiro card)
+        ElementsPage elementsPage = home.openElements();
+        assertThat(page).hasURL("https://demoqa.com/elements");
 
-        // volta pra home
-        home.gotoHome();
-
-        // Forms
-        home.openForms();
-        assertThat(page).hasURL("**/forms");
-        home.gotoHome();
-
-        // Alerts, Frame & Windows
-        home.openAlertsFrameWindows();
-        assertThat(page).hasURL("**/alertsWindows");
-        home.gotoHome();
-
-        // Widgets
-        home.openWidgets();
-        assertThat(page).hasURL("**/widgets");
-        home.gotoHome();
-
-        // Interactions
-        home.openInteractions();
-        assertThat(page).hasURL("**/interaction");
-        home.gotoHome();
-
-        // Book Store Application
-        home.openBookStoreApplication();
-        assertThat(page).hasURL("**/books");
+        // 3) já na /elements, clica nas seções do accordion, em sequência,
+        //    sem voltar pra home
+        elementsPage
+                .openAccordionSection("Forms")
+                .openAccordionSection("Alerts, Frame & Windows")
+                .openAccordionSection("Widgets")
+                .openAccordionSection("Interactions")
+                .openAccordionSection("Book Store Application");
     }
 }

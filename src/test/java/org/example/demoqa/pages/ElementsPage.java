@@ -1,5 +1,6 @@
 package org.example.demoqa.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import org.example.demoqa.pages.components.SideMenuComponent;
 
@@ -34,4 +35,17 @@ public class ElementsPage extends BasePage {
         page.waitForURL("**/webtables");
         return new WebTablesPage(page);
     }
+
+
+    public ElementsPage openAccordionSection(String sectionName) {
+        Locator header = page.locator(".group-header")
+                .filter(new Locator.FilterOptions().setHasText(sectionName));
+
+        header.first().click();
+        return this;
+    }
+
+
+
+
 }
