@@ -1,6 +1,5 @@
 package org.example.demoqa.pages;
 
-import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import org.example.demoqa.pages.components.SideMenuComponent;
 
@@ -36,14 +35,35 @@ public class ElementsPage extends BasePage {
         return new WebTablesPage(page);
     }
 
+    // NOVO: Buttons
+    public ButtonsPage openButtons() {
+        sideMenu.openItem("Buttons");
+        page.waitForURL("**/buttons");
+        return new ButtonsPage(page);
+    }
 
-    public ElementsPage openAccordionSection(String sectionName) {
-        Locator header = page.locator(".group-header")
-                .filter(new Locator.FilterOptions().setHasText(sectionName));
+    // NOVO: Links
+    public LinksPage openLinks() {
+        sideMenu.openItem("Links");
+        page.waitForURL("**/links");
+        return new LinksPage(page);
+    }
 
-        header.first().click();
+    // Método genérico para qualquer item do menu lateral em Elements
+    public BasePage openAccordionSection(String itemText, String expectedUrlPart) {
+        sideMenu.openItem(itemText);
+        page.waitForURL("**/" + expectedUrlPart);
+        removeObstructions();
         return this;
     }
+
+    // Alternativa: genérico só com clique (sem URL)
+    public ElementsPage openAccordionSection(String itemText) {
+        sideMenu.openItem(itemText);
+        removeObstructions();
+        return this;
+    }
+
 
 
 

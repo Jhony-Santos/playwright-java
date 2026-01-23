@@ -1,7 +1,11 @@
 package org.example.demoqa.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.options.AriaRole;
+
+import java.util.regex.Pattern;
+
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class BasePage {
 
@@ -11,25 +15,25 @@ public class BasePage {
         this.page = page;
     }
 
-    protected void clickHeading(String name) {
-        page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName(name)).click();
+    // Melhor prática: valida carregamento por URL (regex) + âncora visível
+    protected void assertLoaded(Pattern urlPattern, Locator anchor) {
+        if (urlPattern != null) {
+            assertThat(page).hasURL(urlPattern);
+        }
+        assertThat(anchor).isVisible();
     }
 
-
-    protected void clickMenuByText(String text) {
-        page.getByText(text,new Page.GetByTextOptions().setExact(true)).click();
+    // Caso você queira só âncora
+    protected void assertLoaded(Locator anchor) {
+        assertThat(anchor).isVisible();
     }
 
-    // BasePage.java
+    // Mantém o que você já tinha
     protected void removeObstructions() {
         page.evaluate("() => {" +
                 "const hide = sel => { const el = document.querySelector(sel); if (el) el.remove(); };" +
-                "hide('#fixedban');" +     // remove banner fixo de anúncios
-                "hide('footer');" +        // remove rodapé que às vezes cobre botões
+                "hide('#fixedban');" +
+                "hide('footer');" +
                 "}");
     }
-
-
-
-
 }
