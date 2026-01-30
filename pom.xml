@@ -76,13 +76,17 @@
 
     <build>
         <plugins>
-            <!-- Necessário para rodar JUnit 5 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+
+                    <!-- recomendações de estabilidade -->
+                    <forkCount>1</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <parallel>none</parallel>
                 </configuration>
             </plugin>
         </plugins>

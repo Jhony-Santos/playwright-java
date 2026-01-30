@@ -5,21 +5,35 @@ import org.example.demoqa.pages.HomePage;
 import org.example.demoqa.pages.LinksPage;
 import org.junit.jupiter.api.Test;
 
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-
 public class LinksFlowTest extends BaseTest {
 
     @Test
-    void shouldValidateLinksPageLoadedAndBasicElements() {
+    void shouldValidateLinksPageLoadedAndNewTabLinks() {
         LinksPage links = new HomePage(page)
                 .gotoHome()
                 .openElements()
-                .openLinks();
+                .openLinks()
+                .assertPageLoaded();
 
-        links.assertPageLoaded();
+        links
+                .clickHomeAndAssertNewTab()
+                .clickDynamicHomeAndAssertNewTab();
+    }
 
-        // smoke mínimo: garante que existem links principais
-        assertThat(links.homeLink()).isVisible();
-        assertThat(links.createdLink()).isVisible();
+    @Test
+    void shouldValidateAllApiLinksResponses() {
+        LinksPage links = new HomePage(page)
+                .gotoHome()
+                .openElements()
+                .openLinks()
+                .assertPageLoaded();
+
+        links.clickCreated()
+                .clickNoContent()
+                .clickMoved()
+                .clickBadRequest()
+                .clickUnauthorized()
+                .clickForbidden()
+                .clickNotFound();
     }
 }

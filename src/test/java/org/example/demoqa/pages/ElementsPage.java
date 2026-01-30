@@ -1,6 +1,7 @@
 package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
 import org.example.demoqa.pages.components.SideMenuComponent;
 
 public class ElementsPage extends BasePage {
@@ -10,6 +11,21 @@ public class ElementsPage extends BasePage {
         super(page);
         this.sideMenu = new SideMenuComponent(page);
     }
+
+    public BrokenLinksImagesPage openBrokenLinksImages() {
+        page.waitForURL("**/elements");
+        removeObstructions();
+        stepDelay();
+
+        sideMenu.openItem("Broken Links - Images");
+
+        page.waitForURL("**/broken");
+        removeObstructions();
+        stepDelay();
+
+        return new BrokenLinksImagesPage(page);
+    }
+
 
     public TextBoxPage openTextBox() {
         sideMenu.openItem("Text Box");
@@ -35,21 +51,18 @@ public class ElementsPage extends BasePage {
         return new WebTablesPage(page);
     }
 
-    // NOVO: Buttons
     public ButtonsPage openButtons() {
         sideMenu.openItem("Buttons");
         page.waitForURL("**/buttons");
         return new ButtonsPage(page);
     }
 
-    // NOVO: Links
     public LinksPage openLinks() {
         sideMenu.openItem("Links");
         page.waitForURL("**/links");
         return new LinksPage(page);
     }
 
-    // Método genérico para qualquer item do menu lateral em Elements
     public BasePage openAccordionSection(String itemText, String expectedUrlPart) {
         sideMenu.openItem(itemText);
         page.waitForURL("**/" + expectedUrlPart);
@@ -57,15 +70,11 @@ public class ElementsPage extends BasePage {
         return this;
     }
 
-    // Alternativa: genérico só com clique (sem URL)
     public ElementsPage openAccordionSection(String itemText) {
         sideMenu.openItem(itemText);
         removeObstructions();
         return this;
     }
-
-
-
 
 
 }
