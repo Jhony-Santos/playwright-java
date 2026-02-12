@@ -10,11 +10,16 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class BaseTest {
+
+
     protected static Playwright playwright;
     protected static Browser browser;
-
     protected BrowserContext context;
     protected Page page;
+    protected Path downloadsDir;
+
+
+
 
     // ----- FLAGS (VM options) -----
     // -Ddebug=true|false
@@ -77,9 +82,15 @@ public class BaseTest {
         Files.createDirectories(SCREENSHOTS_DIR);
         Files.createDirectories(VIDEOS_DIR);
 
+
+        downloadsDir = Paths.get("target", "downloads");
+        Files.createDirectories(downloadsDir);
+
+
         Browser.NewContextOptions options = new Browser.NewContextOptions()
-                // viewport null -> usa tamanho da janela
-                .setViewportSize(null);
+                .setViewportSize(null)
+                .setAcceptDownloads(true);
+
 
         if (VIDEO) {
             options.setRecordVideoDir(VIDEOS_DIR);

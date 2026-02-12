@@ -1,8 +1,9 @@
 package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.options.AriaRole;
 import org.example.demoqa.pages.components.SideMenuComponent;
+import com.microsoft.playwright.options.AriaRole;
+
 
 public class ElementsPage extends BasePage {
     private final SideMenuComponent sideMenu;
@@ -75,6 +76,30 @@ public class ElementsPage extends BasePage {
         removeObstructions();
         return this;
     }
+
+    public UploadDownloadPage openUploadDownload() {
+        sideMenu.openItem("Upload and Download");
+        page.waitForURL("**/upload-download");
+        removeObstructions();
+        return new UploadDownloadPage(page);
+    }
+
+
+    public DynamicPropertiesPage openDynamicProperties() {
+        page.waitForURL("**/elements");
+        removeObstructions();
+        stepDelay();
+
+        sideMenu.openItem("Dynamic Properties");
+
+        page.waitForURL("**/dynamic-properties");
+        removeObstructions();
+        stepDelay();
+
+        return new DynamicPropertiesPage(page);
+    }
+
+
 
 
 }
