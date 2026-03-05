@@ -1,4 +1,3 @@
-// BasePage.java (CORRIGIDO - removeObstructions seguro + ensure mais estável)
 package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Locator;
@@ -215,11 +214,8 @@ public class BasePage {
             );
 
         } catch (RuntimeException e) {
-            // Diagnóstico: salva HTML + screenshot quando o selector não aparece
             diagnosticSnapshot("waitForText_failed_" + selector.replaceAll("[^a-zA-Z0-9]+", "_"));
 
-            // Fallback: às vezes o header muda, mas o conteúdo principal existe.
-            // O DEMOQA costuma ter container .main-content ou .body-height.
             Locator fallback = page.locator(".main-content, .body-height, .container").first();
             try {
                 fallback.waitFor(new Locator.WaitForOptions()
@@ -231,16 +227,23 @@ public class BasePage {
         }
     }
 
+    /**
+     * Espera o texto aparecer em QUALQUER elemento que bata no seletor (case-insensitive).
+     * (Implementação usando Map para evitar problemas de overload/assinatura no Java.)
+     */
     protected void waitForTextAny(String selector, String expectedSubstring, long timeoutMs) {
-        String txt = expectedSubstring.toLowerCase();
+        Map<String, Object> args = Map.of(
+                "sel", selector,
+                "txt", expectedSubstring.toLowerCase()
+        );
 
         page.waitForFunction(
-                "([sel, txt]) => {" +
+                "({sel, txt}) => {" +
                         "const nodes = Array.from(document.querySelectorAll(sel));" +
                         "if (!nodes.length) return false;" +
                         "return nodes.some(n => (n.textContent || '').toLowerCase().includes(txt));" +
                         "}",
-                new Object[]{selector, txt},
+                args,
                 new Page.WaitForFunctionOptions().setTimeout(timeoutMs)
         );
     }

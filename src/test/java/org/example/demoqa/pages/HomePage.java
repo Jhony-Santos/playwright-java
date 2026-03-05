@@ -2,8 +2,6 @@ package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Page.GetByRoleOptions;
-import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
@@ -32,6 +30,7 @@ public class HomePage extends BasePage {
     public ElementsPage openElements() {
         if (OPEN_ELEMENTS_DIRECT) {
             page.navigate(BASE_URL + "elements", new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+            page.waitForURL("**/elements", new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
             afterNavigation();
             return new ElementsPage(page);
         }
@@ -41,19 +40,20 @@ public class HomePage extends BasePage {
     public ElementsPage openElementsByClick() {
         gotoHome();
 
-        Locator elementsCard = page.locator("div.card")
-                .filter(new Locator.FilterOptions().setHasText("Elements"))
-                .first();
+        // ✅ Card real (mais confiável que clicar no HEADING)
+        Locator elementsCard = page.locator("div.card:has(h5:has-text('Elements'))").first();
 
         elementsCard.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(TIMEOUT_MS));
 
         elementsCard.scrollIntoViewIfNeeded();
+        safeRemoveObstructions();
 
         try {
             elementsCard.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
         } catch (Exception e) {
+            safeRemoveObstructions();
             elementsCard.click(new Locator.ClickOptions().setForce(true).setTimeout(TIMEOUT_MS));
         }
 
@@ -66,52 +66,52 @@ public class HomePage extends BasePage {
 
     // ✅ Seus testes chamam isso
     public FormsPage openForms() {
-        openCardByHeading("Forms", "forms");
+        openCardByText("Forms", "forms");
         return new FormsPage(page);
     }
 
     public AlertsFrameWindowsPage openAlertsFrameWindows() {
-        openCardByHeading("Alerts, Frame & Windows", "alertsWindows");
+        openCardByText("Alerts, Frame & Windows", "alertsWindows");
         return new AlertsFrameWindowsPage(page);
     }
 
     public WidgetsPage openWidgets() {
-        openCardByHeading("Widgets", "widgets");
+        openCardByText("Widgets", "widgets");
         return new WidgetsPage(page);
     }
 
     public InteractionsPage openInteractions() {
-        openCardByHeading("Interactions", "interaction");
+        openCardByText("Interactions", "interaction");
         return new InteractionsPage(page);
     }
 
     public BookStoreApplicationPage openBookStoreApplication() {
-        openCardByHeading("Book Store Application", "books");
+        openCardByText("Book Store Application", "books");
         return new BookStoreApplicationPage(page);
     }
 
     private void afterNavigation() {
         safeRemoveObstructions();
-        // ✅ Home às vezes não “monta” #app rápido; então âncora mínima
         ensureAppIsUp(List.of("body"));
     }
 
-    private void openCardByHeading(String headingText, String urlSuffix) {
+    private void openCardByText(String cardText, String urlSuffix) {
         afterNavigation();
 
-        Locator heading = page.getByRole(
-                AriaRole.HEADING,
-                new GetByRoleOptions().setName(headingText)
-        );
-
-        heading.waitFor(new Locator.WaitForOptions()
+        Locator card = page.locator("div.card:has-text('" + cardText + "')").first();
+        card.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(TIMEOUT_MS));
 
-        heading.scrollIntoViewIfNeeded();
+        card.scrollIntoViewIfNeeded();
         safeRemoveObstructions();
 
-        heading.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
+        try {
+            card.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
+        } catch (Exception e) {
+            safeRemoveObstructions();
+            card.click(new Locator.ClickOptions().setForce(true).setTimeout(TIMEOUT_MS));
+        }
 
         page.waitForURL("**/" + urlSuffix, new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);

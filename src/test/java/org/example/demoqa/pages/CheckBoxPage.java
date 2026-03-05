@@ -10,23 +10,29 @@ public class CheckBoxPage extends BasePage {
     public CheckBoxPage(Page page) { super(page); }
 
     private Locator tree() {
-        return page.locator(".react-checkbox-tree").first();
+        return page.locator(".check-box-tree-wrapper .rc-tree").first();
     }
 
     private void ensureOnCheckBoxPage() {
-        page.waitForURL("**/checkbox", new Page.WaitForURLOptions().setTimeout(15_000));
-        page.locator("div.main-header:has-text('Check Box')").first()
-                .waitFor(new Locator.WaitForOptions().setTimeout(15_000));
+        page.waitForURL("**/checkbox", new Page.WaitForURLOptions().setTimeout(30_000));
+        // O site atual usa <h1 class="text-center">Check Box</h1>
+        page.locator("h1:has-text('Check Box')").first()
+                .waitFor(new Locator.WaitForOptions().setTimeout(30_000));
         safeRemoveObstructions();
     }
 
     private void ensureTreeReady() {
         ensureOnCheckBoxPage();
 
-        // ATTACHED é mais estável que VISIBLE para container grande
         tree().waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.ATTACHED)
-                .setTimeout(15_000));
+                .setTimeout(60_000));
+
+        page.waitForFunction(
+                "() => document.querySelectorAll('.rc-tree .rc-tree-treenode').length > 0",
+                null,
+                new Page.WaitForFunctionOptions().setTimeout(60_000)
+        );
 
         safeRemoveObstructions();
     }
@@ -35,51 +41,93 @@ public class CheckBoxPage extends BasePage {
     public CheckBoxPage expandAll() {
         ensureTreeReady();
 
-        Locator expandAll = page.locator(
-                "button[title='Expand all'], button[aria-label='Expand all'], button.rct-option-expand-all"
-        ).first();
+        // No layout atual não existe "Expand all" button.
+        // Então expandimos clicando nos switchers fechados até não sobrar nenhum.
+        for (int i = 0; i < 25; i++) {
+            int clicked = (int) page.evaluate("""
+                () => {
+                  const list = Array.from(document.querySelectorAll('.rc-tree-switcher_close'));
+                  if (!list.length) return 0;
+                  list.forEach(el => el.click());
+                  return list.length;
+                }
+            """);
 
-        expandAll.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(15_000));
+            if (clicked == 0) break;
+            page.waitForTimeout(150);
+        }
 
-        expandAll.scrollIntoViewIfNeeded();
-        expandAll.click();
         return this;
     }
 
-    public CheckBoxPage selectByNode(String nodeId) {
+    /**
+     * Mantive sua assinatura: selectByNode("desktop")
+     * Aqui "desktop" é interpretado como TEXTO do nó (Desktop), case-insensitive.
+     */
+    public CheckBoxPage selectByNode(String nodeText) {
         ensureTreeReady();
 
-        Locator input = page.locator("#tree-node-" + nodeId).first();
-        input.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.ATTACHED)
-                .setTimeout(10_000));
+        String wanted = nodeText == null ? "" : nodeText.trim().toLowerCase();
 
-        // Clica no checkbox visual do nó (mais confiável que label[for])
-        Locator checkbox = input.locator("xpath=ancestor::li[1]//span[contains(@class,'rct-checkbox')]").first();
-        checkbox.scrollIntoViewIfNeeded();
-        checkbox.click();
+        // Clica no checkbox pelo aria-label "Select <Texto>"
+        // Ex.: "Select Desktop"
+        Locator checkbox = page.locator(".rc-tree-checkbox[aria-label]")
+                .filter(new Locator.FilterOptions().setHasText("")) // só pra permitir filter chain
+                .first();
 
+        // Encontrar o checkbox certo via JS (mais determinístico)
+        boolean ok = (boolean) page.evaluate("""
+            (wanted) => {
+              const nodes = Array.from(document.querySelectorAll('.rc-tree-treenode'));
+              const norm = s => (s || '').trim().toLowerCase();
+              for (const n of nodes) {
+                const title = n.querySelector('.rc-tree-title');
+                if (!title) continue;
+                if (norm(title.textContent) !== wanted) continue;
+
+                const cb = n.querySelector('.rc-tree-checkbox[aria-label]');
+                if (!cb) return false;
+                cb.click();
+                return true;
+              }
+              return false;
+            }
+        """, wanted);
+
+        assertTrue(ok, "Não encontrei o nó '" + nodeText + "' na árvore rc-tree.");
         return this;
     }
 
-    public String resultText() {
-        Locator result = page.locator("#result").first();
-        result.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10_000));
-        return result.innerText();
+    // OBS: No layout atual dessa página, não existe #result como no demo antigo.
+    // Se você tiver #result em algum build, mantenha. Se não, recomendo validar o aria-checked do checkbox.
+    public boolean isCheckedByNode(String nodeText) {
+        String wanted = nodeText == null ? "" : nodeText.trim().toLowerCase();
+
+        return (boolean) page.evaluate("""
+            (wanted) => {
+              const norm = s => (s || '').trim().toLowerCase();
+              const nodes = Array.from(document.querySelectorAll('.rc-tree-treenode'));
+              for (const n of nodes) {
+                const title = n.querySelector('.rc-tree-title');
+                if (!title) continue;
+                if (norm(title.textContent) !== wanted) continue;
+
+                const cb = n.querySelector('.rc-tree-checkbox');
+                if (!cb) return false;
+                // quando marcado, rc-tree costuma adicionar a classe rc-tree-checkbox-checked
+                return cb.classList.contains('rc-tree-checkbox-checked')
+                    || cb.getAttribute('aria-checked') === 'true';
+              }
+              return false;
+            }
+        """, wanted);
     }
 
     public CheckBoxPage assertResultContains(String expected) {
-        String out = resultText().toLowerCase();
-        assertTrue(out.contains(expected.toLowerCase()),
-                "Esperava conter '" + expected + "' em: " + out);
+        // Se você ainda tiver #result no seu site/build, você pode reativar essa lógica.
+        // No seu HTML atual, NÃO há #result. Então validamos estado do checkbox.
+        assertTrue(isCheckedByNode(expected),
+                "Esperava que o nó '" + expected + "' estivesse marcado, mas não está.");
         return this;
-    }
-
-    public boolean isCheckedByNode(String nodeId) {
-        return page.locator("#tree-node-" + nodeId).isChecked();
     }
 }

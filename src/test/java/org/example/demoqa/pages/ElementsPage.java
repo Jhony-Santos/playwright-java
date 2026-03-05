@@ -1,6 +1,8 @@
 package org.example.demoqa.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 import org.example.demoqa.pages.components.SideMenuComponent;
 
@@ -18,39 +20,74 @@ public class ElementsPage extends BasePage {
     private void ensureOnElements() {
         page.waitForURL("**/elements", new Page.WaitForURLOptions().setTimeout(20_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
     }
 
     public CheckBoxPage openCheckBox() {
         page.navigate("https://demoqa.com/checkbox",
-                new Page.NavigateOptions().setWaitUntil(WaitUntilState.LOAD));
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
 
         page.waitForURL("**/checkbox", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
 
-        // ✅ Ajuda bastante em SPA: espera a rede "assentar"
-        page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE,
-                new Page.WaitForLoadStateOptions().setTimeout(30_000));
+        // Não dependa de networkidle (ads/gtm vão te enganar)
+        try {
+            page.waitForLoadState(com.microsoft.playwright.options.LoadState.DOMCONTENTLOADED,
+                    new Page.WaitForLoadStateOptions().setTimeout(10_000));
+        } catch (Exception ignored) {}
 
-        // ✅ Confirma rota por texto em qualquer anchor (precisa existir no seu BasePage)
-        waitForTextAny("div.main-header, h1, h2, header, .main-content", "Check Box", 60_000);
+        try {
+            // 1) Confirma que estamos na página certa
+            waitForTextAny("h1, h2, header, .main-content, body", "Check Box", 30_000);
 
-        // ✅ Espera o componente aparecer (polling do DOM)
-        page.waitForFunction(
-                "() => document.querySelector('.react-checkbox-tree') !== null",
-                null,
-                new Page.WaitForFunctionOptions().setTimeout(60_000)
-        );
+            // 2) Espera o container real do componente
+            Locator treeWrapper = page.locator(".check-box-tree-wrapper").first();
+            treeWrapper.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.ATTACHED)
+                    .setTimeout(60_000));
 
-        // ✅ Espera hidratação (labels renderizados)
-        page.waitForFunction(
-                "() => document.querySelectorAll('.react-checkbox-tree label').length > 0",
-                null,
-                new Page.WaitForFunctionOptions().setTimeout(60_000)
-        );
+            // 3) Espera o rc-tree montar e ter pelo menos 1 nó
+            Locator rcTree = page.locator(".check-box-tree-wrapper .rc-tree").first();
+            rcTree.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.ATTACHED)
+                    .setTimeout(60_000));
 
-        safeRemoveObstructions();
-        return new CheckBoxPage(page);
+            page.waitForFunction(
+                    "() => document.querySelectorAll('.rc-tree .rc-tree-treenode').length > 0",
+                    null,
+                    new Page.WaitForFunctionOptions().setTimeout(60_000)
+            );
+
+            // 4) Garante que o nó "Home" existe (texto)
+            page.waitForFunction(
+                    "() => Array.from(document.querySelectorAll('.rc-tree-title')).some(e => (e.textContent||'').trim() === 'Home')",
+                    null,
+                    new Page.WaitForFunctionOptions().setTimeout(60_000)
+            );
+
+            safeRemoveObstructions();
+            return new CheckBoxPage(page);
+
+        } catch (RuntimeException e) {
+            diagnosticSnapshot("checkbox_not_ready");
+
+            String visibleText = "<unable_to_read>";
+            try {
+                visibleText = (String) page.evaluate(
+                        "() => (document.body ? (document.body.innerText || '') : '')"
+                );
+                if (visibleText != null && visibleText.length() > 600) {
+                    visibleText = visibleText.substring(0, 600) + "...";
+                }
+            } catch (Exception ignored) {}
+
+            throw new RuntimeException(
+                    "Falha ao abrir CheckBox. URL=" + safeUrl()
+                            + " title=" + safeTitle()
+                            + " visibleTextSnippet=" + visibleText,
+                    e
+            );
+        }
     }
 
     // ------------------ Mantive seus demais métodos ------------------
@@ -60,7 +97,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/text-box", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new TextBoxPage(page);
     }
 
@@ -69,7 +106,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/links", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new LinksPage(page);
     }
 
@@ -78,7 +115,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/upload-download", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new UploadDownloadPage(page);
     }
 
@@ -87,7 +124,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/webtables", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new WebTablesPage(page);
     }
 
@@ -96,7 +133,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/buttons", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new ButtonsPage(page);
     }
 
@@ -105,7 +142,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/radio-button", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new RadioButtonPage(page);
     }
 
@@ -114,7 +151,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/dynamic-properties", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new DynamicPropertiesPage(page);
     }
 
@@ -123,7 +160,7 @@ public class ElementsPage extends BasePage {
                 new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForURL("**/broken", new Page.WaitForURLOptions().setTimeout(30_000));
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("div.main-header"), 60_000, true);
+        ensureAppIsUp(List.of("body"), 60_000, true);
         return new BrokenLinksImagesPage(page);
     }
 

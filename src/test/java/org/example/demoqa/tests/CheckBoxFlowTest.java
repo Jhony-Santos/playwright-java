@@ -1,4 +1,3 @@
-// CheckBoxFlowTest.java
 package org.example.demoqa.tests;
 
 import org.example.demoqa.BaseTest;
