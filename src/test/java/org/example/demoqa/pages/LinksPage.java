@@ -4,7 +4,9 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.AriaRole;
+
 import java.util.regex.Pattern;
+
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class LinksPage extends BasePage {
@@ -19,7 +21,6 @@ public class LinksPage extends BasePage {
     private static final String API_FORBIDDEN    = "/forbidden";
     private static final String API_NOT_FOUND    = "/invalid-url";
 
-    // Use: -DuiMsgTimeout=6000
     private static final int UI_MSG_TIMEOUT_MS =
             Integer.parseInt(System.getProperty("uiMsgTimeout", "4000"));
 
@@ -67,8 +68,6 @@ public class LinksPage extends BasePage {
         return this;
     }
 
-    // --------- Links que abrem nova aba ---------
-
     public LinksPage clickHomeAndAssertNewTab() {
         Page popup = page.waitForPopup(() -> {
             homeLink.scrollIntoViewIfNeeded();
@@ -77,7 +76,6 @@ public class LinksPage extends BasePage {
         });
         assertThat(popup).hasURL(Pattern.compile("https://demoqa\\.com/?$"));
         popup.close();
-
         stepDelay();
         return this;
     }
@@ -90,43 +88,25 @@ public class LinksPage extends BasePage {
         });
         assertThat(popup).hasURL(Pattern.compile("https://demoqa\\.com/?$"));
         popup.close();
-
         stepDelay();
         return this;
     }
 
-    // --------- Links de API ---------
-
-    public LinksPage clickCreated() {
-        return clickApiLinkAndObserveUI(createdLink, API_CREATED, 201, "Created", true);
-    }
+    public LinksPage clickCreated() { return clickApiLinkAndObserveUI(createdLink, API_CREATED, 201, "Created", true); }
 
     public LinksPage clickNoContent() {
-        // 204 é notoriamente instável no DemoQA para UI; observamos, mas não exigimos texto.
         return clickApiLinkAndObserveUI(noContentLink, API_NO_CONTENT, 204, "No Content", false);
     }
 
-    public LinksPage clickMoved() {
-        return clickApiLinkAndObserveUI(movedLink, API_MOVED, 301, "Moved Permanently", true);
-    }
+    public LinksPage clickMoved() { return clickApiLinkAndObserveUI(movedLink, API_MOVED, 301, "Moved Permanently", true); }
 
-    public LinksPage clickBadRequest() {
-        return clickApiLinkAndObserveUI(badRequestLink, API_BAD_REQUEST, 400, "Bad Request", true);
-    }
+    public LinksPage clickBadRequest() { return clickApiLinkAndObserveUI(badRequestLink, API_BAD_REQUEST, 400, "Bad Request", true); }
 
-    public LinksPage clickUnauthorized() {
-        return clickApiLinkAndObserveUI(unauthorizedLink, API_UNAUTHORIZED, 401, "Unauthorized", true);
-    }
+    public LinksPage clickUnauthorized() { return clickApiLinkAndObserveUI(unauthorizedLink, API_UNAUTHORIZED, 401, "Unauthorized", true); }
 
-    public LinksPage clickForbidden() {
-        return clickApiLinkAndObserveUI(forbiddenLink, API_FORBIDDEN, 403, "Forbidden", true);
-    }
+    public LinksPage clickForbidden() { return clickApiLinkAndObserveUI(forbiddenLink, API_FORBIDDEN, 403, "Forbidden", true); }
 
-    public LinksPage clickNotFound() {
-        return clickApiLinkAndObserveUI(notFoundLink, API_NOT_FOUND, 404, "Not Found", true);
-    }
-
-    // --------- Core ---------
+    public LinksPage clickNotFound() { return clickApiLinkAndObserveUI(notFoundLink, API_NOT_FOUND, 404, "Not Found", true); }
 
     private LinksPage clickApiLinkAndObserveUI(
             Locator link,
@@ -139,9 +119,8 @@ public class LinksPage extends BasePage {
 
         link.scrollIntoViewIfNeeded();
         highlight(link);
-        stepDelay(); // tempo para você ver qual link será clicado
+        stepDelay();
 
-        // 1) Fonte de verdade: REDE
         Response response = page.waitForResponse(
                 r -> r.url().contains(apiPath),
                 () -> link.click()
@@ -156,7 +135,6 @@ public class LinksPage extends BasePage {
             );
         }
 
-        // 2) Observabilidade: UI (não reprova o teste)
         observeUiMessageBestEffort(expectUiText ? expectedStatus : null,
                 expectUiText ? expectedText : null);
 
@@ -170,13 +148,6 @@ public class LinksPage extends BasePage {
                 "}");
     }
 
-    /**
-     * Observa a UI de forma robusta:
-     * - Rola até o #linkResponse sempre
-     * - Aguarda TEXTO (não visibilidade) por polling curto
-     * - Nunca falha o teste
-     * - Garante stepDelay ao final para você conseguir ler
-     */
     private void observeUiMessageBestEffort(Integer statusCode, String statusText) {
         try {
             linkResponse.scrollIntoViewIfNeeded();
@@ -187,14 +158,12 @@ public class LinksPage extends BasePage {
             while (System.currentTimeMillis() - start < UI_MSG_TIMEOUT_MS) {
                 String current = safeText(linkResponse.textContent());
 
-                // Caso não exija texto (ex.: 204), só tenta esperar aparecer algo
                 if (statusCode == null || statusText == null) {
                     if (!current.isBlank()) break;
                     page.waitForTimeout(150);
                     continue;
                 }
 
-                // Espera conter status e texto
                 if (current.contains(String.valueOf(statusCode)) && current.contains(statusText)) {
                     break;
                 }
@@ -203,9 +172,7 @@ public class LinksPage extends BasePage {
             }
 
         } catch (Exception ignored) {
-            // UI nunca reprova
         } finally {
-            // tempo de leitura garantido
             stepDelay();
         }
     }

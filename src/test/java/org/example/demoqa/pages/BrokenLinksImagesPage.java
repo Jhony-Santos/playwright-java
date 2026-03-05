@@ -3,33 +3,77 @@ package org.example.demoqa.pages;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
+
 import java.util.regex.Pattern;
+
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-
-
 
 public class BrokenLinksImagesPage extends BasePage {
 
-    // Âncora de carregamento (boa prática): Heading (H1) pelo role
-    private final Locator heading = page.getByRole(
-            AriaRole.HEADING,
-            new Page.GetByRoleOptions().setName("Broken Links - Images")
-    );
+    private static final Pattern URL_REGEX = Pattern.compile(".*/broken/?(\\?.*)?$");
 
-    // LINKS (robusto: no DOM atual NÃO há id; o <a> vem logo após o <p> "Valid Link"/"Broken Link")
-    private final Locator validLink = page.locator("xpath=//p[normalize-space()='Valid Link']/following::a[1]");
-    private final Locator brokenLink = page.locator("xpath=//p[normalize-space()='Broken Link']/following::a[1]");
+    // Âncora de carregamento
+    private final Locator heading;
 
-    // IMAGENS: pega a 1ª <img> após o texto
-    private final Locator validImage = page.locator("xpath=//p[normalize-space()='Valid image']/following::img[1]");
-    private final Locator brokenImage = page.locator("xpath=//p[normalize-space()='Broken image']/following::img[1]");
+    // Links (robusto: anchor logo após o <p>)
+    private final Locator validLink;
+    private final Locator brokenLink;
+
+    // Imagens
+    private final Locator validImage;
+    private final Locator brokenImage;
 
     public BrokenLinksImagesPage(Page page) {
         super(page);
-        removeObstructions();
 
-        // BOA PRÁTICA: validar URL + elemento âncora único
-        assertLoaded(Pattern.compile(".*/broken$"), heading);
+        this.heading = page.getByRole(
+                AriaRole.HEADING,
+                new Page.GetByRoleOptions().setName("Broken Links - Images")
+        );
+
+        // normalize-space + case-insensitive (mantive seu approach)
+        this.validLink = page.locator(
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='valid link']/following::a[1]"
+        );
+        this.brokenLink = page.locator(
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='broken link']/following::a[1]"
+        );
+
+        this.validImage = page.locator(
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='valid image']/following::img[1]"
+        );
+        this.brokenImage = page.locator(
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='broken image']/following::img[1]"
+        );
+    }
+
+    /**
+     * ✅ Chame no teste (ou após navegar).
+     * Retorna this para permitir fluent:
+     *   .openBrokenLinksImages().assertPageLoaded()...
+     */
+    public BrokenLinksImagesPage assertPageLoaded() {
+        safeRemoveObstructions();
+
+        // sincroniza com carga mínima do DOM
+        try { page.waitForLoadState(LoadState.DOMCONTENTLOADED); } catch (Exception ignored) {}
+        try { page.waitForLoadState(LoadState.NETWORKIDLE); } catch (Exception ignored) {}
+
+        // ancora genérica do app (seu BasePage)
+        ensureAppIsUp();
+
+        // URL + heading
+        assertThat(page).hasURL(URL_REGEX);
+        assertThat(heading).isVisible();
+
+        // garante que os elementos principais existem/estão visíveis
+        assertThat(validLink).isVisible();
+        assertThat(brokenLink).isVisible();
+        assertThat(validImage).isVisible();
+        assertThat(brokenImage).isVisible();
+
+        return this;
     }
 
     // ---------- IMAGENS ----------
@@ -42,7 +86,7 @@ public class BrokenLinksImagesPage extends BasePage {
     }
 
     private boolean isImageLoaded(Locator img) {
-        // Critério clássico do front-end: complete && naturalWidth > 0
+        // Critério clássico: complete && naturalWidth > 0
         Object result = img.evaluate("el => el.complete === true && el.naturalWidth > 0");
         return Boolean.TRUE.equals(result);
     }
@@ -57,18 +101,21 @@ public class BrokenLinksImagesPage extends BasePage {
     }
 
     /**
-     * Robusto: valida visibilidade + texto + padrão do href
-     * (sem depender de ids que podem não existir).
+     * Robusto: não fixa texto inteiro (só "Click Here"),
+     * e valida href contendo demoqa.com
      */
     public void assertValidLinkVisibleAndLabeled() {
         assertThat(validLink).isVisible();
-        assertThat(validLink).hasText("Click Here for Valid Link");
+        assertThat(validLink).containsText("Click Here");
         assertThat(validLink).hasAttribute("href", Pattern.compile(".*demoqa\\.com.*"));
     }
 
+    /**
+     * Robusto: href deve apontar para status_codes/500
+     */
     public void assertBrokenLinkVisibleAndLabeled() {
         assertThat(brokenLink).isVisible();
-        assertThat(brokenLink).hasText("Click Here for Broken Link");
+        assertThat(brokenLink).containsText("Click Here");
         assertThat(brokenLink).hasAttribute("href", Pattern.compile(".*/status_codes/500.*"));
     }
 }

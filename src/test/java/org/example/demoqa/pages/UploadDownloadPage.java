@@ -21,28 +21,24 @@ public class UploadDownloadPage extends BasePage {
         this.uploadedFilePath = page.locator("#uploadedFilePath");
     }
 
-    /** Upload via input[type=file] + validação do texto exibido na página */
     public UploadDownloadPage uploadFile(Path file) {
         removeObstructions();
         assertThat(uploadInput).isVisible();
 
         uploadInput.setInputFiles(file);
 
-        // valida que o DemoQA mostrou o arquivo
         assertThat(uploadedFilePath).isVisible();
         assertThat(uploadedFilePath).containsText(file.getFileName().toString());
 
         return this;
     }
 
-    /** Captura o Download do Playwright (sincronizado) */
     public Download download() {
         removeObstructions();
         assertThat(downloadButton).isVisible();
         return page.waitForDownload(() -> downloadButton.click());
     }
 
-    /** Expor o locator para asserts adicionais se você quiser */
     public Locator uploadedFilePath() {
         return uploadedFilePath;
     }

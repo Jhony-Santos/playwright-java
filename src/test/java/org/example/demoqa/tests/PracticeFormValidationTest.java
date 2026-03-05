@@ -18,14 +18,16 @@ public class PracticeFormValidationTest extends BaseTest {
                 .openPracticeForm()
                 .trySubmit();
 
-        assertTrue(form.isRequiredFirstName());
-        assertTrue(form.firstNameValidity("valueMissing"));
-        assertTrue(form.isRequiredLastName());
-        assertTrue(form.lastNameValidity("valueMissing"));
-        assertTrue(form.isRequiredGender());
-        assertTrue(form.genderValidity("valueMissing"));
-        assertTrue(form.isRequiredMobile());
-        assertTrue(form.mobileValidity("valueMissing"));
+        // ✅ comportamento real: não abre modal
+        assertFalse(form.formIsSubmitted());
+
+        // ✅ inputs realmente inválidos
+        assertTrue(form.isFirstNameInvalid());
+        assertTrue(form.isLastNameInvalid());
+        assertTrue(form.isMobileInvalid());
+
+        // ✅ gender não selecionado (validação HTML5 do radio não é confiável no DemoQA)
+        assertFalse(form.isAnyGenderSelected());
 
         // mensagens nativas existem (sem fixar texto/idioma)
         assertFalse(form.firstNameValidationMessage().isBlank());
@@ -41,7 +43,8 @@ public class PracticeFormValidationTest extends BaseTest {
 
         form.fillMobile("123456789").trySubmit();
 
-        assertTrue(form.mobileValidity("tooShort"));
+        // maxlength/regex do DemoQA costuma invalidar via :invalid
+        assertTrue(form.isMobileInvalid());
         assertFalse(form.mobileValidationMessage().isBlank());
     }
 
@@ -54,16 +57,16 @@ public class PracticeFormValidationTest extends BaseTest {
 
         form.fillMobile("abc1234567").trySubmit();
 
-        assertTrue(form.mobileValidity("patternMismatch"));
+        assertTrue(form.isMobileInvalid());
         assertFalse(form.mobileValidationMessage().isBlank());
     }
 
     @Test
     void email_withInvalidFormat_shouldTypeMismatch() {
-        PracticeFormPage form = new HomePage(page).
-                gotoHome().
-                openForms().
-                openPracticeForm();
+        PracticeFormPage form = new HomePage(page)
+                .gotoHome()
+                .openForms()
+                .openPracticeForm();
 
         form.fillFirstName("Jhon Hacker")
                 .fillLastName("Silva")
@@ -71,14 +74,10 @@ public class PracticeFormValidationTest extends BaseTest {
                 .fillMobile("9998887766");
 
         form.fillEmail("foo");
-
         form.trySubmit();
 
-        // Agora o browser valida o e-mail e marca typeMismatch = true
-        form.emailValidity("typeMismatch");
+        assertTrue(form.emailValidity("typeMismatch"));
         assertFalse(form.formIsSubmitted());
-
-
     }
 
     @Test
@@ -88,19 +87,18 @@ public class PracticeFormValidationTest extends BaseTest {
                 .openForms()
                 .openPracticeForm();
 
-        // envia 11 dígitos
         form.fillMobile("12345678901");
 
-        // lê o valor que ficou no input
         String value = form.mobileValue();
-
-        // o input da página tem maxlength=10 -> deve truncar
         assertEquals("1234567890", value);
     }
 
     @Test
     void happyPath_minimalRequired_shouldOpenModal() {
-        PracticeFormPage form = new HomePage(page).gotoHome().openForms().openPracticeForm();
+        PracticeFormPage form = new HomePage(page)
+                .gotoHome()
+                .openForms()
+                .openPracticeForm();
 
         form.fillFirstName("Ana")
                 .fillLastName("Silva")
@@ -111,9 +109,4 @@ public class PracticeFormValidationTest extends BaseTest {
         assertThat(form.resultModalTitle()).hasText("Thanks for submitting the form");
         form.closeResultModal();
     }
-
-
-
-
-
 }

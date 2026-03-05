@@ -1,8 +1,8 @@
 package org.example.demoqa;
 
 import com.microsoft.playwright.*;
-import com.microsoft.playwright.options.ScreenshotType;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,150 +11,91 @@ import java.util.List;
 
 public class BaseTest {
 
-
-    protected static Playwright playwright;
-    protected static Browser browser;
+    protected Playwright playwright;
+    protected Browser browser;
     protected BrowserContext context;
     protected Page page;
-    protected Path downloadsDir;
 
-
-
-
-    // ----- FLAGS (VM options) -----
-    // -Ddebug=true|false
-    protected static final boolean DEBUG =
-            Boolean.parseBoolean(System.getProperty("debug", "true"));
-
-    // -Dtrace=true|false
-    private static final boolean TRACE =
-            Boolean.parseBoolean(System.getProperty("trace", "false"));
-
-    // -Dvideo=true|false
-    private static final boolean VIDEO =
-            Boolean.parseBoolean(System.getProperty("video", "false"));
-
-    // -Dslowmo=900  (ms)
-    // se debug=true e nada for informado, assume 800ms (bom para observar)
-    private static final int SLOW_MO =
-            Integer.parseInt(System.getProperty("slowmo", DEBUG ? "800" : "0"));
-
-    // -Dpause=true|false  (Playwright Inspector)
-    private static final boolean PAUSE =
-            Boolean.parseBoolean(System.getProperty("pause", "false"));
-
-    // -Dhold=5000  (ms) segura no final do teste
-    private static final int HOLD_MS =
-            Integer.parseInt(System.getProperty("hold", DEBUG ? "1500" : "0"));
-
-    // -DactionTimeout=30000 / -DnavTimeout=60000 (opcional)
-    private static final int ACTION_TIMEOUT_MS =
-            Integer.parseInt(System.getProperty("actionTimeout", DEBUG ? "30000" : "8000"));
-
-    private static final int NAV_TIMEOUT_MS =
-            Integer.parseInt(System.getProperty("navTimeout", DEBUG ? "60000" : "20000"));
-
-    // ----- ARTIFACTS -----
-    private static final Path ARTIFACTS_DIR = Paths.get("target", "artifacts");
-    private static final Path TRACES_DIR = ARTIFACTS_DIR.resolve("traces");
-    private static final Path SCREENSHOTS_DIR = ARTIFACTS_DIR.resolve("screenshots");
-    private static final Path VIDEOS_DIR = ARTIFACTS_DIR.resolve("videos");
-
-    @BeforeAll
-    static void beforeAll() {
-        playwright = Playwright.create();
-
-        BrowserType.LaunchOptions launch = new BrowserType.LaunchOptions()
-                .setHeadless(!DEBUG)
-                .setSlowMo(SLOW_MO)
-                .setArgs(List.of(
-                        "--start-maximized",
-                        "--window-size=1600,1000"
-                ));
-
-        browser = playwright.chromium().launch(launch);
-    }
+    protected final Path downloadsDir = Paths.get("target", "downloads");
+    protected final Path diagnosticsDir = Paths.get("target", "diagnostics");
 
     @BeforeEach
-    void createContext(TestInfo testInfo) throws Exception {
-        Files.createDirectories(ARTIFACTS_DIR);
-        Files.createDirectories(TRACES_DIR);
-        Files.createDirectories(SCREENSHOTS_DIR);
-        Files.createDirectories(VIDEOS_DIR);
+    void setUp() throws Exception {
+        playwright = Playwright.create();
 
+        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
 
-        downloadsDir = Paths.get("target", "downloads");
+        List<String> chromiumArgs = List.of(
+                "--disable-gpu",
+                "--disable-dev-shm-usage",
+                "--no-sandbox"
+        );
+
+        browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
+                .setHeadless(headless)
+                .setArgs(chromiumArgs));
+
         Files.createDirectories(downloadsDir);
+        Files.createDirectories(diagnosticsDir);
 
+        context = browser.newContext(new Browser.NewContextOptions()
+                .setAcceptDownloads(true)
+                .setViewportSize(1280, 720));
 
-        Browser.NewContextOptions options = new Browser.NewContextOptions()
-                .setViewportSize(null)
-                .setAcceptDownloads(true);
+        // ✅ Bloqueia ads/trackers — OK gerar ERR_FAILED/ERR_ABORTED nos logs.
+        // ✅ Loga o que foi abortado para garantir que não bloqueamos algo indevido.
+        context.route("**/*", route -> {
+            String url = route.request().url();
 
+            boolean block =
+                    url.contains("doubleclick.net")
+                            || url.contains("securepubads.g.doubleclick.net")
+                            || url.contains("googlesyndication.com")
+                            || url.contains("google-analytics.com")
+                            || url.contains("googletagmanager.com")
+                            || url.contains("stats.g.doubleclick.net")
+                            || url.contains("analytics.google.com")
+                            || url.contains("dmtry.com")
+                            || url.contains("spotxchange.com");
 
-        if (VIDEO) {
-            options.setRecordVideoDir(VIDEOS_DIR);
-        }
+            if (block) {
+                System.out.println("[route:abort] " + url);
+                route.abort();
+            } else {
+                route.resume();
+            }
+        });
 
-        context = browser.newContext(options);
         page = context.newPage();
 
-        // Timeouts globais (boa prática: centralizados aqui)
-        page.setDefaultTimeout(ACTION_TIMEOUT_MS);
-        page.setDefaultNavigationTimeout(NAV_TIMEOUT_MS);
+        page.onConsoleMessage(msg -> {
+            if ("warning".equals(msg.type()) || "error".equals(msg.type())) {
+                System.out.println("[console:" + msg.type() + "] " + msg.text());
+            }
+        });
 
-        // Tracing
-        if (TRACE) {
-            context.tracing().start(new Tracing.StartOptions()
-                    .setScreenshots(true)
-                    .setSnapshots(true)
-                    .setSources(true));
-        }
+        page.onPageError(err -> System.out.println("[pageerror] " + err));
 
-        // Inspector (debug avançado)
-        if (PAUSE) {
-            page.pause();
-        }
+        page.onRequestFailed(req ->
+                System.out.println("[requestfailed] " + req.method() + " " + req.url() + " -> " + req.failure())
+        );
+
+        page.onResponse(res -> {
+            int status = res.status();
+            if (status >= 400) {
+                System.out.println("[http " + status + "] " + res.url());
+            }
+        });
+
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(45_000);
     }
 
     @AfterEach
-    void tearDown(TestInfo testInfo) {
-        try {
-            // Segura no final para você ver o estado final (somente em debug)
-            if (DEBUG && HOLD_MS > 0 && page != null) {
-                page.waitForTimeout(HOLD_MS);
-            }
-
-            // Screenshot (em debug sempre ajuda; em trace também)
-            if ((DEBUG || TRACE) && page != null) {
-                String fileName = safeTestName(testInfo) + ".png";
-                page.screenshot(new Page.ScreenshotOptions()
-                        .setPath(SCREENSHOTS_DIR.resolve(fileName))
-                        .setFullPage(true)
-                        .setType(ScreenshotType.PNG));
-            }
-
-            // Trace
-            if (TRACE && context != null) {
-                String traceName = safeTestName(testInfo) + ".zip";
-                context.tracing().stop(new Tracing.StopOptions()
-                        .setPath(TRACES_DIR.resolve(traceName)));
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (context != null) context.close();
-        }
-    }
-
-    @AfterAll
-    static void afterAll() {
-        if (browser != null) browser.close();
-        if (playwright != null) playwright.close();
-    }
-
-    private static String safeTestName(TestInfo testInfo) {
-        String className = testInfo.getTestClass().map(Class::getSimpleName).orElse("UnknownClass");
-        String methodName = testInfo.getTestMethod().map(m -> m.getName()).orElse("unknownTest");
-        return className + "_" + methodName;
+    void tearDown() {
+        try { if (page != null) page.close(); } catch (Exception ignored) {}
+        try { if (context != null) context.close(); } catch (Exception ignored) {}
+        try { if (browser != null) browser.close(); } catch (Exception ignored) {}
+        try { if (playwright != null) playwright.close(); } catch (Exception ignored) {}
     }
 }

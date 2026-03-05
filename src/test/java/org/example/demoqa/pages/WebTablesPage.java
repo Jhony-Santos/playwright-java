@@ -2,13 +2,14 @@ package org.example.demoqa.pages;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
-import java.util.regex.Pattern;
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import com.microsoft.playwright.options.WaitForSelectorState;
 
+import java.util.regex.Pattern;
+
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class WebTablesPage extends BasePage {
 
-    //private static final String URL_PATTERN = "**/webtables";
     private static final Pattern URL_REGEX = Pattern.compile(".*/webtables/?(\\?.*)?$");
 
     public WebTablesPage(Page page) {
@@ -16,22 +17,30 @@ public class WebTablesPage extends BasePage {
     }
 
     // ---- Asserções de página ----
+    public WebTablesPage assertPageLoaded() {
+        safeRemoveObstructions();
+        ensureAppIsUp(); // ancora genérica do app
 
-    public void assertPageLoaded() {
         assertThat(page).hasURL(URL_REGEX);
+
+        Locator header = page.locator("div.main-header").first();
+        header.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(30_000));
+        assertThat(header).hasText("Web Tables");
+
+        // tabela “existindo”
+        assertThat(page.locator(".rt-table")).isVisible();
+
+        return this;
     }
 
     // ---- Locators básicos ----
+    private Locator addButton() { return page.locator("#addNewRecordButton"); }
+    private Locator searchBox() { return page.locator("#searchBox"); }
 
-    private Locator addButton() {
-        return page.locator("#addNewRecordButton");
-    }
+    // Modal / form
+    private Locator modalContent() { return page.locator(".modal-content").first(); }
+    private Locator modalTitle() { return page.locator(".modal-title").first(); }
 
-    private Locator searchBox() {
-        return page.locator("#searchBox");
-    }
-
-    // formulário do modal "Registration Form"
     private Locator firstNameInput() { return page.locator("#firstName"); }
     private Locator lastNameInput()  { return page.locator("#lastName"); }
     private Locator emailInput()     { return page.locator("#userEmail"); }
@@ -40,25 +49,30 @@ public class WebTablesPage extends BasePage {
     private Locator departmentInput(){ return page.locator("#department"); }
     private Locator submitButton()   { return page.locator("#submit"); }
 
-    // corpo da tabela
-    private Locator tableBody() {
-        return page.locator(".rt-tbody");
-    }
+    private Locator tableBody() { return page.locator(".rt-tbody").first(); }
+    private Locator noRowsFound() { return page.locator(".rt-noData").first(); }
 
-    /**
-     * Retorna a linha da tabela que contém o e-mail informado.
-     * (cada linha é um .rt-tr-group)
-     */
+    /** Retorna a primeira linha da tabela que contém o e-mail informado. */
     public Locator rowByEmail(String email) {
         return tableBody().locator(".rt-tr-group")
-                .filter(new Locator.FilterOptions().setHasText(email));
+                .filter(new Locator.FilterOptions().setHasText(email))
+                .first();
     }
 
-    // ---- Ações de mais alto nível ----
-
+    // ---- Ações de alto nível ----
     public WebTablesPage openAddForm() {
-        addButton().click();
-        // o Playwright já vai aguardar o formulário aparecer
+        safeRemoveObstructions();
+        click(addButton());
+
+        // Sincroniza com abertura do modal
+        modalContent().waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(30_000));
+
+        // defensivo
+        if (modalTitle().count() > 0) {
+            assertThat(modalTitle()).containsText("Registration Form");
+        }
         return this;
     }
 
@@ -80,11 +94,23 @@ public class WebTablesPage extends BasePage {
     }
 
     public WebTablesPage submitForm() {
-        submitButton().click();
+        safeRemoveObstructions();
+        click(submitButton());
+
+        // Modal pode virar hidden OU detach — espera ambos
+        try {
+            modalContent().waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.HIDDEN)
+                    .setTimeout(10_000));
+        } catch (Exception ignored) {
+            modalContent().waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.DETACHED)
+                    .setTimeout(10_000));
+        }
+
         return this;
     }
 
-    /** fluxo completo para cadastrar um registro */
     public WebTablesPage addRecord(
             String firstName,
             String lastName,
@@ -99,8 +125,25 @@ public class WebTablesPage extends BasePage {
     }
 
     public WebTablesPage search(String text) {
-        searchBox().fill(""); // limpa
+        searchBox().fill("");
         searchBox().fill(text);
+
+        // Espera reação do grid: ou aparece a linha filtrada, ou aparece "No rows found"
+        // (sem travar em timing do React Table)
+        Locator anyRow = tableBody().locator(".rt-tr-group").first();
+        try {
+            anyRow.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(10_000));
+        } catch (Exception ignored) {
+            // pode ser que não exista linha: então "No rows found" deve aparecer
+            if (noRowsFound().count() > 0) {
+                noRowsFound().waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(10_000));
+            }
+        }
+
         return this;
     }
 }

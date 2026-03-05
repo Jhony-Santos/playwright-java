@@ -1,7 +1,6 @@
 package org.example.demoqa.tests;
 
 import org.example.demoqa.BaseTest;
-import org.example.demoqa.pages.ElementsPage;
 import org.example.demoqa.pages.HomePage;
 import org.junit.jupiter.api.Test;
 
@@ -10,21 +9,26 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 public class NavigationSmokeTest extends BaseTest {
 
     @Test
-    void shouldOpenAllMainSectionsFromElementsAccordion() {
-        // 1) entra na home
+    void shouldNavigateAcrossMainSectionsFromHomeCards() {
+
         HomePage home = new HomePage(page).gotoHome();
 
-        // 2) abre Elements (primeiro card)
-        ElementsPage elementsPage = home.openElements();
-        assertThat(page).hasURL("https://demoqa.com/elements");
+        home.openElements();
+        assertThat(page).hasURL("**/elements");
 
-        // 3) já na /elements, clica nas seções do accordion, em sequência,
-        //    sem voltar pra home
-        elementsPage
-                .openAccordionSection("Forms")
-                .openAccordionSection("Alerts, Frame & Windows")
-                .openAccordionSection("Widgets")
-                .openAccordionSection("Interactions")
-                .openAccordionSection("Book Store Application");
+        home.gotoHome().openForms();
+        assertThat(page).hasURL("**/forms");
+
+        home.gotoHome().openAlertsFrameWindows();
+        assertThat(page).hasURL("**/alertsWindows");
+
+        home.gotoHome().openWidgets();
+        assertThat(page).hasURL("**/widgets");
+
+        home.gotoHome().openInteractions();
+        assertThat(page).hasURL("**/interaction");
+
+        home.gotoHome().openBookStoreApplication();
+        assertThat(page).hasURL("**/books");
     }
 }

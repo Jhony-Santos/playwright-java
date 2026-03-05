@@ -23,6 +23,8 @@ public class DynamicPropertiesPage extends BasePage {
 
     public void assertLoaded() {
         page.waitForURL("**/dynamic-properties");
+        removeObstructions();
+
         enableAfterBtn.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(TIMEOUT_MS));
@@ -35,7 +37,6 @@ public class DynamicPropertiesPage extends BasePage {
     }
 
     public void waitEnableButtonEnabled() {
-        // Espera até o atributo "disabled" virar false
         page.waitForFunction(
                 "sel => { const el = document.querySelector(sel); return el && !el.disabled; }",
                 "#enableAfter",
@@ -50,7 +51,6 @@ public class DynamicPropertiesPage extends BasePage {
     }
 
     public void waitColorButtonClassToChange(String beforeClass) {
-        // Espera o className mudar (determinístico; não depende de CSS cascade)
         page.waitForFunction(
                 "args => {" +
                         "const [sel, before] = args;" +
@@ -62,23 +62,8 @@ public class DynamicPropertiesPage extends BasePage {
         );
     }
 
-    // Alternativa ainda mais forte: esperar aparecer "text-success" (se o DemoQA usar isso)
-    public void waitColorButtonHasSuccessClass() {
-        page.waitForFunction(
-                "sel => {" +
-                        "const el = document.querySelector(sel);" +
-                        "return el && el.className.includes('text-success');" +
-                        "}",
-                "#colorChange",
-                new Page.WaitForFunctionOptions().setTimeout(TIMEOUT_MS)
-        );
-    }
-
     // ---------------- Visible After ----------------
     public void assertVisibleAfterHiddenInitially() {
-        // O elemento normalmente existe no DOM, mas está invisível inicialmente
-        // Se existir e estiver hidden, assertThat(...).not().isVisible() funciona.
-        // Se não existir no DOM no início, tudo bem: a espera abaixo cobre.
         if (visibleAfterBtn.count() > 0) {
             assertThat(visibleAfterBtn).not().isVisible();
         }

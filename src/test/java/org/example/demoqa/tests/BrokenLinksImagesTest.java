@@ -14,7 +14,8 @@ public class BrokenLinksImagesTest extends BaseTest {
         BrokenLinksImagesPage brokenPage = new HomePage(page)
                 .gotoHome()
                 .openElementsByClick()
-                .openBrokenLinksImages();
+                .openBrokenLinksImages()
+                .assertPageLoaded();
 
         // 1) Validar imagens via DOM
         Assertions.assertTrue(
@@ -55,4 +56,10 @@ public class BrokenLinksImagesTest extends BaseTest {
             );
         }
     }
+
+
+
+
+
+
 }

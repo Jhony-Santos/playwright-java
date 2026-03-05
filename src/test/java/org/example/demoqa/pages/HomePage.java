@@ -8,20 +8,38 @@ import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import java.util.List;
 
 public class HomePage extends BasePage {
 
     private static final String BASE_URL = "https://demoqa.com/";
     private static final double TIMEOUT_MS = 30_000;
 
-    public HomePage(Page page) { super(page); }
+    // Flag: -DopenElementsDirect=true para usar navegação direta
+    private static final boolean OPEN_ELEMENTS_DIRECT =
+            Boolean.parseBoolean(System.getProperty("openElementsDirect", "false"));
 
+    public HomePage(Page page) {
+        super(page);
+    }
 
+    public HomePage gotoHome() {
+        page.navigate(BASE_URL, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+        afterNavigation();
+        return this;
+    }
+
+    public ElementsPage openElements() {
+        if (OPEN_ELEMENTS_DIRECT) {
+            page.navigate(BASE_URL + "elements", new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+            afterNavigation();
+            return new ElementsPage(page);
+        }
+        return openElementsByClick();
+    }
 
     public ElementsPage openElementsByClick() {
-        removeObstructions();
-        stepDelay();
+        gotoHome();
 
         Locator elementsCard = page.locator("div.card")
                 .filter(new Locator.FilterOptions().setHasText("Elements"))
@@ -29,91 +47,57 @@ public class HomePage extends BasePage {
 
         elementsCard.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(30_000));
-        assertThat(elementsCard).isVisible();
+                .setTimeout(TIMEOUT_MS));
 
         elementsCard.scrollIntoViewIfNeeded();
-        stepDelay();
 
         try {
-            elementsCard.click(new Locator.ClickOptions().setTimeout(30_000));
+            elementsCard.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
         } catch (Exception e) {
-            elementsCard.click(new Locator.ClickOptions().setForce(true).setTimeout(30_000));
+            elementsCard.click(new Locator.ClickOptions().setForce(true).setTimeout(TIMEOUT_MS));
         }
 
-        page.waitForURL("**/elements", new Page.WaitForURLOptions().setTimeout(30_000));
+        page.waitForURL("**/elements", new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        Locator appRoot = page.locator("#app");
-        appRoot.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.ATTACHED)
-                .setTimeout(30_000));
-
-        // 2) Diagnóstico: o que existe no DOM?
-        int headerCount = page.locator(".main-header, header, h1, h2").count();
-        int leftCount = page.locator(".left-pannel, .left-panel").count();
-        int menuCount = page.locator("ul.menu-list").count();
-
-
-        if (leftCount == 0 && menuCount == 0) {
-            System.out.println("Side menu não montou após clique. Fazendo fallback para navegação direta...");
-            page.navigate(BASE_URL + "elements",
-                    new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
-            removeObstructions();
-            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        }
-
-
-        // 3) Se ainda assim não montou nada, imprime um pedaço do HTML e do texto do body
-        if (headerCount == 0 && leftCount == 0) {
-            String html = page.content();
-            System.out.println("HTML snippet:\n" + (html.length() > 800 ? html.substring(0, 800) : html));
-
-            String bodyText = page.locator("body").innerText();
-            System.out.println("BODY text snippet:\n" + (bodyText.length() > 400 ? bodyText.substring(0, 400) : bodyText));
-        }
-
-        removeObstructions();
-
-        page.onConsoleMessage(msg ->
-                System.out.println("[console][" + msg.type() + "] " + msg.text())
-        );
-
-        page.onPageError(err ->
-                System.out.println("[pageerror] " + err)
-        );
-
-        stepDelay();
-
+        afterNavigation();
         return new ElementsPage(page);
     }
 
-
-
-
-
-    public HomePage gotoHome() {
-        page.navigate(
-                BASE_URL,
-                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
-        );
-
-        removeObstructions();
-        return this;
+    // ✅ Seus testes chamam isso
+    public FormsPage openForms() {
+        openCardByHeading("Forms", "forms");
+        return new FormsPage(page);
     }
 
-    public ElementsPage openElements() {
-        page.navigate(
-                BASE_URL + "elements",
-                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
-        );
-
-        removeObstructions();
-        return new ElementsPage(page);
+    public AlertsFrameWindowsPage openAlertsFrameWindows() {
+        openCardByHeading("Alerts, Frame & Windows", "alertsWindows");
+        return new AlertsFrameWindowsPage(page);
     }
 
-    private void openCard(String headingText, String urlSuffix) {
-        removeObstructions();
+    public WidgetsPage openWidgets() {
+        openCardByHeading("Widgets", "widgets");
+        return new WidgetsPage(page);
+    }
+
+    public InteractionsPage openInteractions() {
+        openCardByHeading("Interactions", "interaction");
+        return new InteractionsPage(page);
+    }
+
+    public BookStoreApplicationPage openBookStoreApplication() {
+        openCardByHeading("Book Store Application", "books");
+        return new BookStoreApplicationPage(page);
+    }
+
+    private void afterNavigation() {
+        safeRemoveObstructions();
+        // ✅ Home às vezes não “monta” #app rápido; então âncora mínima
+        ensureAppIsUp(List.of("body"));
+    }
+
+    private void openCardByHeading(String headingText, String urlSuffix) {
+        afterNavigation();
 
         Locator heading = page.getByRole(
                 AriaRole.HEADING,
@@ -125,40 +109,13 @@ public class HomePage extends BasePage {
                 .setTimeout(TIMEOUT_MS));
 
         heading.scrollIntoViewIfNeeded();
-        removeObstructions();
+        safeRemoveObstructions();
 
         heading.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
 
         page.waitForURL("**/" + urlSuffix, new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        removeObstructions();
+        afterNavigation();
     }
-
-    public FormsPage openForms() {
-        openCard("Forms", "forms");
-        return new FormsPage(page);
-    }
-
-    public AlertsFrameWindowsPage openAlertsFrameWindows() {
-        openCard("Alerts, Frame & Windows", "alertsWindows");
-        return new AlertsFrameWindowsPage(page);
-    }
-
-    public WidgetsPage openWidgets() {
-        openCard("Widgets", "widgets");
-        return new WidgetsPage(page);
-    }
-
-    public InteractionsPage openInteractions() {
-        openCard("Interactions", "interaction");
-        return new InteractionsPage(page);
-    }
-
-    public BookStoreApplicationPage openBookStoreApplication() {
-        openCard("Book Store Application", "books");
-        return new BookStoreApplicationPage(page);
-    }
-
-
 }

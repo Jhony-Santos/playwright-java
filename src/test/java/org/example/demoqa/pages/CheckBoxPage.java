@@ -1,33 +1,77 @@
 package org.example.demoqa.pages;
 
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.WaitForSelectorState;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class CheckBoxPage extends BasePage {
     public CheckBoxPage(Page page) { super(page); }
 
-    /** Expande toda a árvore (mais robusto que clicar no primeiro Toggle). */
+    private Locator tree() {
+        return page.locator(".react-checkbox-tree").first();
+    }
+
+    private void ensureOnCheckBoxPage() {
+        page.waitForURL("**/checkbox", new Page.WaitForURLOptions().setTimeout(15_000));
+        page.locator("div.main-header:has-text('Check Box')").first()
+                .waitFor(new Locator.WaitForOptions().setTimeout(15_000));
+        safeRemoveObstructions();
+    }
+
+    private void ensureTreeReady() {
+        ensureOnCheckBoxPage();
+
+        // ATTACHED é mais estável que VISIBLE para container grande
+        tree().waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(15_000));
+
+        safeRemoveObstructions();
+    }
+
+    /** Expande toda a árvore. */
     public CheckBoxPage expandAll() {
-        page.locator("button[title='Expand all']").click();
+        ensureTreeReady();
+
+        Locator expandAll = page.locator(
+                "button[title='Expand all'], button[aria-label='Expand all'], button.rct-option-expand-all"
+        ).first();
+
+        expandAll.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(15_000));
+
+        expandAll.scrollIntoViewIfNeeded();
+        expandAll.click();
         return this;
     }
 
-    /**
-     * Marca um nó pelo id do input (estável).
-     * Exemplos de nodeId: "desktop", "documents", "downloads", "notes", "commands", "react"...
-     */
     public CheckBoxPage selectByNode(String nodeId) {
-        page.locator("label[for='tree-node-" + nodeId + "']").click();
+        ensureTreeReady();
+
+        Locator input = page.locator("#tree-node-" + nodeId).first();
+        input.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.ATTACHED)
+                .setTimeout(10_000));
+
+        // Clica no checkbox visual do nó (mais confiável que label[for])
+        Locator checkbox = input.locator("xpath=ancestor::li[1]//span[contains(@class,'rct-checkbox')]").first();
+        checkbox.scrollIntoViewIfNeeded();
+        checkbox.click();
+
         return this;
     }
 
-    /** Lê o texto de resultado (ex.: “You have selected : desktop …”). */
     public String resultText() {
-        return page.locator("#result").innerText();
+        Locator result = page.locator("#result").first();
+        result.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10_000));
+        return result.innerText();
     }
 
-    /** Helper de asserção para manter o teste limpo. */
     public CheckBoxPage assertResultContains(String expected) {
         String out = resultText().toLowerCase();
         assertTrue(out.contains(expected.toLowerCase()),
@@ -35,7 +79,6 @@ public class CheckBoxPage extends BasePage {
         return this;
     }
 
-    /** (Opcional) Verifica o estado diretamente no input. */
     public boolean isCheckedByNode(String nodeId) {
         return page.locator("#tree-node-" + nodeId).isChecked();
     }
