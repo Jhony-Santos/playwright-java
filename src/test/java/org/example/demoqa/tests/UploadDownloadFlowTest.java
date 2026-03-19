@@ -12,7 +12,7 @@ import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class UploadDownloadFlowTest extends BaseTest {
+    public class UploadDownloadFlowTest extends BaseTest {
 
     @Test
     void shouldUploadFileAndDownloadSample() throws Exception {

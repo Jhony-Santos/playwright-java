@@ -13,14 +13,11 @@ public class BrokenLinksImagesPage extends BasePage {
 
     private static final Pattern URL_REGEX = Pattern.compile(".*/broken/?(\\?.*)?$");
 
-    // Âncora de carregamento
     private final Locator heading;
 
-    // Links (robusto: anchor logo após o <p>)
     private final Locator validLink;
     private final Locator brokenLink;
 
-    // Imagens
     private final Locator validImage;
     private final Locator brokenImage;
 
@@ -32,66 +29,93 @@ public class BrokenLinksImagesPage extends BasePage {
                 new Page.GetByRoleOptions().setName("Broken Links - Images")
         );
 
-        // normalize-space + case-insensitive (mantive seu approach)
         this.validLink = page.locator(
-                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='valid link']/following::a[1]"
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='valid link']/following-sibling::a[1]"
         );
+
         this.brokenLink = page.locator(
-                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='broken link']/following::a[1]"
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='broken link']/following-sibling::a[1]"
         );
 
         this.validImage = page.locator(
-                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='valid image']/following::img[1]"
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='valid image']/following-sibling::img[1]"
         );
+
         this.brokenImage = page.locator(
-                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='broken image']/following::img[1]"
+                "xpath=//p[translate(normalize-space(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='broken image']/following-sibling::img[1]"
         );
     }
 
-    /**
-     * ✅ Chame no teste (ou após navegar).
-     * Retorna this para permitir fluent:
-     *   .openBrokenLinksImages().assertPageLoaded()...
-     */
     public BrokenLinksImagesPage assertPageLoaded() {
         safeRemoveObstructions();
 
-        // sincroniza com carga mínima do DOM
-        try { page.waitForLoadState(LoadState.DOMCONTENTLOADED); } catch (Exception ignored) {}
-        try { page.waitForLoadState(LoadState.NETWORKIDLE); } catch (Exception ignored) {}
+        try {
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        } catch (Exception ignored) {}
 
-        // ancora genérica do app (seu BasePage)
         ensureAppIsUp();
 
-        // URL + heading
         assertThat(page).hasURL(URL_REGEX);
         assertThat(heading).isVisible();
 
-        // garante que os elementos principais existem/estão visíveis
         assertThat(validLink).isVisible();
         assertThat(brokenLink).isVisible();
         assertThat(validImage).isVisible();
         assertThat(brokenImage).isVisible();
 
+        waitForImageSettlement(validImage, 10_000);
+        waitForImageSettlement(brokenImage, 10_000);
+
         return this;
     }
 
     // ---------- IMAGENS ----------
-    public boolean isValidImageLoaded() {
-        return isImageLoaded(validImage);
-    }
 
     public boolean isBrokenImageLoaded() {
         return isImageLoaded(brokenImage);
     }
 
+    public String validImageSrc() {
+        return validImage.getAttribute("src");
+    }
+
+    public String brokenImageSrc() {
+        return brokenImage.getAttribute("src");
+    }
+
+    private void waitForImageSettlement(Locator img, long timeoutMs) {
+        try {
+            img.waitFor(new Locator.WaitForOptions().setTimeout(timeoutMs));
+
+            page.waitForFunction(
+                    "(el) => !!el && el.complete === true",
+                    img.elementHandle(),
+                    new Page.WaitForFunctionOptions().setTimeout(timeoutMs)
+            );
+        } catch (Exception ignored) {
+            // não quebra aqui; a validação final decide
+        }
+    }
+
     private boolean isImageLoaded(Locator img) {
-        // Critério clássico: complete && naturalWidth > 0
-        Object result = img.evaluate("el => el.complete === true && el.naturalWidth > 0");
-        return Boolean.TRUE.equals(result);
+        try {
+            Object result = img.evaluate("""
+                el => {
+                  if (!el) return false;
+                  const complete = el.complete === true;
+                  const naturalWidth = Number(el.naturalWidth || 0);
+                  const src = el.currentSrc || el.src || '';
+                  return complete && naturalWidth > 0 && src.trim().length > 0;
+                }
+            """);
+            return Boolean.TRUE.equals(result);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // ---------- LINKS ----------
+
     public String validLinkHref() {
         return validLink.getAttribute("href");
     }
@@ -100,19 +124,12 @@ public class BrokenLinksImagesPage extends BasePage {
         return brokenLink.getAttribute("href");
     }
 
-    /**
-     * Robusto: não fixa texto inteiro (só "Click Here"),
-     * e valida href contendo demoqa.com
-     */
     public void assertValidLinkVisibleAndLabeled() {
         assertThat(validLink).isVisible();
         assertThat(validLink).containsText("Click Here");
         assertThat(validLink).hasAttribute("href", Pattern.compile(".*demoqa\\.com.*"));
     }
 
-    /**
-     * Robusto: href deve apontar para status_codes/500
-     */
     public void assertBrokenLinkVisibleAndLabeled() {
         assertThat(brokenLink).isVisible();
         assertThat(brokenLink).containsText("Click Here");

@@ -41,8 +41,16 @@ public class FormsPage extends BasePage {
 
         safeRemoveObstructions();
 
-        // A Practice Form às vezes “monta” devagar; body + header costumam ser melhor do que só #app
-        ensureAppIsUp(List.of("body", "div.main-header"), 60_000, true);
+        // ✅ readiness baseado no que importa: o formulário
+        ensureAppIsUp(List.of("body", "#firstName"), 60_000, true);
+
+        // Header é só best-effort; não bloqueia o fluxo
+        try {
+            page.locator("div.main-header, h1").first()
+                    .waitFor(new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(5_000));
+        } catch (Exception ignored) {}
 
         // Confirma que o form realmente está pronto
         page.locator("#firstName").first()
@@ -50,10 +58,15 @@ public class FormsPage extends BasePage {
                         .setState(WaitForSelectorState.VISIBLE)
                         .setTimeout(TIMEOUT_MS));
 
+        page.locator("#submit").first()
+                .waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.ATTACHED)
+                        .setTimeout(TIMEOUT_MS));
+
         return new PracticeFormPage(page);
     }
 
-    // ------------------ Fallback (se você quiser manter o fluxo real do menu) ------------------
+    // ------------------ Fallback (fluxo real pelo menu) ------------------
 
     private PracticeFormPage openPracticeFormViaMenu() {
         safeRemoveObstructions();
@@ -65,11 +78,25 @@ public class FormsPage extends BasePage {
                 new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
 
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("body", "div.main-header"), 60_000, true);
+
+        // ✅ readiness baseado no form
+        ensureAppIsUp(List.of("body", "#firstName"), 60_000, true);
+
+        try {
+            page.locator("div.main-header, h1").first()
+                    .waitFor(new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(5_000));
+        } catch (Exception ignored) {}
 
         page.locator("#firstName").first()
                 .waitFor(new Locator.WaitForOptions()
                         .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(TIMEOUT_MS));
+
+        page.locator("#submit").first()
+                .waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.ATTACHED)
                         .setTimeout(TIMEOUT_MS));
 
         return new PracticeFormPage(page);

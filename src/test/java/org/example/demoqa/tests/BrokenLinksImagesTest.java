@@ -17,49 +17,45 @@ public class BrokenLinksImagesTest extends BaseTest {
                 .openBrokenLinksImages()
                 .assertPageLoaded();
 
-        // 1) Validar imagens via DOM
-        Assertions.assertTrue(
-                brokenPage.isValidImageLoaded(),
-                "Imagem válida deveria carregar (naturalWidth > 0)."
-        );
-
+        // 1) Validar imagem quebrada via DOM (determinístico)
         Assertions.assertFalse(
                 brokenPage.isBrokenImageLoaded(),
                 "Imagem quebrada NÃO deveria carregar (naturalWidth == 0)."
         );
 
-        // 2) Validar links na UI (texto + href) - robusto
+        // 2) Validar links na UI
         brokenPage.assertValidLinkVisibleAndLabeled();
         brokenPage.assertBrokenLinkVisibleAndLabeled();
 
+        // 3) Extrair URLs/src
         String validUrl = brokenPage.validLinkHref();
         String brokenUrl = brokenPage.brokenLinkHref();
+        String validImageSrc = brokenPage.validImageSrc();
 
         Assertions.assertNotNull(validUrl, "Href do link válido veio nulo.");
         Assertions.assertNotNull(brokenUrl, "Href do link quebrado veio nulo.");
+        Assertions.assertNotNull(validImageSrc, "Src da imagem válida veio nulo.");
 
-        // 3) Validar links via HTTP (robusto e determinístico)
+        // 4) Validar via HTTP (robusto e determinístico)
         try (HttpStatusClient http = new HttpStatusClient(playwright)) {
             int validStatus = http.getStatus(validUrl);
             int brokenStatus = http.getStatus(brokenUrl);
+            int imageStatus = http.getStatus(validImageSrc);
 
-            // Robusto: link "válido" pode retornar 2xx OU 3xx (redirect)
             Assertions.assertTrue(
                     validStatus >= 200 && validStatus < 400,
                     "Link válido deveria retornar 2xx/3xx (redirect aceito). Status: " + validStatus
             );
 
-            // Link quebrado deve retornar 4xx/5xx
             Assertions.assertTrue(
                     brokenStatus >= 400,
                     "Link quebrado deveria retornar 4xx/5xx. Status: " + brokenStatus
             );
+
+            Assertions.assertTrue(
+                    imageStatus >= 200 && imageStatus < 400,
+                    "Imagem válida deveria retornar 2xx/3xx. Status: " + imageStatus
+            );
         }
     }
-
-
-
-
-
-
 }

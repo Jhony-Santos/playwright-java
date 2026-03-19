@@ -7,6 +7,9 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 
 import java.util.List;
+import java.util.regex.Pattern;
+
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class HomePage extends BasePage {
 
@@ -118,4 +121,6 @@ public class HomePage extends BasePage {
 
         afterNavigation();
     }
+
+
 }

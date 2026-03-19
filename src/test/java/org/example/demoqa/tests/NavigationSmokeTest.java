@@ -1,10 +1,11 @@
 package org.example.demoqa.tests;
 
+
 import org.example.demoqa.BaseTest;
 import org.example.demoqa.pages.HomePage;
 import org.junit.jupiter.api.Test;
+import static org.example.demoqa.support.TestAsserts.assertOnPath;
 
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 public class NavigationSmokeTest extends BaseTest {
 
@@ -14,21 +15,24 @@ public class NavigationSmokeTest extends BaseTest {
         HomePage home = new HomePage(page).gotoHome();
 
         home.openElements();
-        assertThat(page).hasURL("**/elements");
+        assertOnPath(page, "/elements");
 
         home.gotoHome().openForms();
-        assertThat(page).hasURL("**/forms");
+        assertOnPath(page, "/forms");
 
         home.gotoHome().openAlertsFrameWindows();
-        assertThat(page).hasURL("**/alertsWindows");
+        assertOnPath(page, "/alertsWindows");
 
         home.gotoHome().openWidgets();
-        assertThat(page).hasURL("**/widgets");
+        assertOnPath(page, "/widgets");
 
         home.gotoHome().openInteractions();
-        assertThat(page).hasURL("**/interaction");
+        assertOnPath(page, "/interaction");
 
         home.gotoHome().openBookStoreApplication();
-        assertThat(page).hasURL("**/books");
+        assertOnPath(page, "/books");
+
+
     }
+
 }

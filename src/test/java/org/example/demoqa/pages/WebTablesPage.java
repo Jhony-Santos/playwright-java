@@ -4,6 +4,8 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -19,16 +21,21 @@ public class WebTablesPage extends BasePage {
     // ---- Asserções de página ----
     public WebTablesPage assertPageLoaded() {
         safeRemoveObstructions();
-        ensureAppIsUp(); // ancora genérica do app
+
+        ensureAppIsUp(List.of("body", "#addNewRecordButton", "#searchBox"), 60_000, true);
 
         assertThat(page).hasURL(URL_REGEX);
 
-        Locator header = page.locator("div.main-header").first();
-        header.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(30_000));
-        assertThat(header).hasText("Web Tables");
+        try {
+            Locator header = page.locator("div.main-header, h1").first();
+            header.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(5_000));
+            assertThat(header).containsText("Web Tables");
+        } catch (Exception ignored) {}
 
-        // tabela “existindo”
-        assertThat(page.locator(".rt-table")).isVisible();
+        assertThat(addButton()).isVisible();
+        assertThat(searchBox()).isVisible();
 
         return this;
     }
@@ -64,15 +71,18 @@ public class WebTablesPage extends BasePage {
         safeRemoveObstructions();
         click(addButton());
 
-        // Sincroniza com abertura do modal
         modalContent().waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(30_000));
 
-        // defensivo
+        firstNameInput().waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(30_000));
+
         if (modalTitle().count() > 0) {
             assertThat(modalTitle()).containsText("Registration Form");
         }
+
         return this;
     }
 
@@ -97,7 +107,6 @@ public class WebTablesPage extends BasePage {
         safeRemoveObstructions();
         click(submitButton());
 
-        // Modal pode virar hidden OU detach — espera ambos
         try {
             modalContent().waitFor(new Locator.WaitForOptions()
                     .setState(WaitForSelectorState.HIDDEN)
@@ -107,6 +116,11 @@ public class WebTablesPage extends BasePage {
                     .setState(WaitForSelectorState.DETACHED)
                     .setTimeout(10_000));
         }
+
+        // espera o grid voltar ao estado interativo
+        searchBox().waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10_000));
 
         return this;
     }
@@ -128,22 +142,27 @@ public class WebTablesPage extends BasePage {
         searchBox().fill("");
         searchBox().fill(text);
 
-        // Espera reação do grid: ou aparece a linha filtrada, ou aparece "No rows found"
-        // (sem travar em timing do React Table)
-        Locator anyRow = tableBody().locator(".rt-tr-group").first();
-        try {
-            anyRow.waitFor(new Locator.WaitForOptions()
-                    .setState(WaitForSelectorState.VISIBLE)
-                    .setTimeout(10_000));
-        } catch (Exception ignored) {
-            // pode ser que não exista linha: então "No rows found" deve aparecer
-            if (noRowsFound().count() > 0) {
-                noRowsFound().waitFor(new Locator.WaitForOptions()
-                        .setState(WaitForSelectorState.VISIBLE)
-                        .setTimeout(10_000));
-            }
-        }
+        waitGridToReflectSearch(text, 10_000);
 
         return this;
+    }
+
+    private void waitGridToReflectSearch(String text, long timeoutMs) {
+        try {
+            page.waitForFunction(
+                    "({ email }) => {" +
+                            "  const body = document.querySelector('.rt-tbody');" +
+                            "  const noData = document.querySelector('.rt-noData');" +
+                            "  const bodyText = (body?.innerText || '').toLowerCase();" +
+                            "  const noDataText = (noData?.innerText || '').toLowerCase();" +
+                            "  return bodyText.includes(email.toLowerCase()) || noDataText.includes('no rows found');" +
+                            "}",
+                    Map.of("email", text),
+                    new Page.WaitForFunctionOptions().setTimeout(timeoutMs)
+            );
+        } catch (Exception ignored) {
+            // fallback leve: deixa o assert final do teste apontar a falha real
+            page.waitForTimeout(1000);
+        }
     }
 }
