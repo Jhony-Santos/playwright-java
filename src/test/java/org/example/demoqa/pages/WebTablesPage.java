@@ -4,8 +4,13 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -18,7 +23,6 @@ public class WebTablesPage extends BasePage {
         super(page);
     }
 
-    // ---- Asserções de página ----
     public WebTablesPage assertPageLoaded() {
         safeRemoveObstructions();
 
@@ -32,7 +36,8 @@ public class WebTablesPage extends BasePage {
                     .setState(WaitForSelectorState.VISIBLE)
                     .setTimeout(5_000));
             assertThat(header).containsText("Web Tables");
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         assertThat(addButton()).isVisible();
         assertThat(searchBox()).isVisible();
@@ -40,36 +45,148 @@ public class WebTablesPage extends BasePage {
         return this;
     }
 
-    // ---- Locators básicos ----
+    // ---------- Locators básicos ----------
     private Locator addButton() { return page.locator("#addNewRecordButton"); }
     private Locator searchBox() { return page.locator("#searchBox"); }
 
-    // Modal / form
+    // modal
     private Locator modalContent() { return page.locator(".modal-content").first(); }
-    private Locator modalTitle() { return page.locator(".modal-title").first(); }
+    private Locator modalTitle() { return modalContent().locator(".modal-title").first(); }
 
-    private Locator firstNameInput() { return page.locator("#firstName"); }
-    private Locator lastNameInput()  { return page.locator("#lastName"); }
-    private Locator emailInput()     { return page.locator("#userEmail"); }
-    private Locator ageInput()       { return page.locator("#age"); }
-    private Locator salaryInput()    { return page.locator("#salary"); }
-    private Locator departmentInput(){ return page.locator("#department"); }
-    private Locator submitButton()   { return page.locator("#submit"); }
+    private Locator firstNameInput() { return modalContent().locator("#firstName"); }
+    private Locator lastNameInput() { return modalContent().locator("#lastName"); }
+    private Locator emailInput() { return modalContent().locator("#userEmail"); }
+    private Locator ageInput() { return modalContent().locator("#age"); }
+    private Locator salaryInput() { return modalContent().locator("#salary"); }
+    private Locator departmentInput() { return modalContent().locator("#department"); }
+    private Locator submitButton() { return modalContent().locator("#submit"); }
 
-    private Locator tableBody() { return page.locator(".rt-tbody").first(); }
-    private Locator noRowsFound() { return page.locator(".rt-noData").first(); }
+    // tabela ATUAL do DemoQA
+    private Locator table() { return page.locator(".web-tables-wrapper table").first(); }
+    private Locator tableRows() { return page.locator(".web-tables-wrapper table tbody tr"); }
 
-    /** Retorna a primeira linha da tabela que contém o e-mail informado. */
-    public Locator rowByEmail(String email) {
-        return tableBody().locator(".rt-tr-group")
-                .filter(new Locator.FilterOptions().setHasText(email))
-                .first();
+    /**
+     * Lê a tabela diretamente do DOM atual.
+     * Cada linha retorna uma lista de células.
+     */
+    @SuppressWarnings("unchecked")
+    private List<List<String>> tableData() {
+        Object raw = page.evaluate("""
+            () => {
+              const rows = Array.from(document.querySelectorAll('.web-tables-wrapper table tbody tr'));
+              return rows.map(row =>
+                Array.from(row.querySelectorAll('td'))
+                  .map(cell => (cell.textContent || '').trim())
+              );
+            }
+        """);
+
+        List<List<String>> result = new ArrayList<>();
+
+        if (!(raw instanceof List<?> outer)) {
+            return result;
+        }
+
+        for (Object rowObj : outer) {
+            if (!(rowObj instanceof List<?> inner)) {
+                continue;
+            }
+
+            List<String> row = new ArrayList<>();
+            for (Object cellObj : inner) {
+                row.add(cellObj == null ? "" : String.valueOf(cellObj));
+            }
+
+            result.add(row);
+        }
+
+        return result;
     }
 
-    // ---- Ações de alto nível ----
+    /**
+     * Procura a linha pelo e-mail na 4a coluna.
+     * Índice esperado:
+     * 0 First Name
+     * 1 Last Name
+     * 2 Age
+     * 3 Email
+     * 4 Salary
+     * 5 Department
+     */
+    private int findRowIndexByEmail(String email) {
+        List<List<String>> rows = tableData();
+
+        for (int i = 0; i < rows.size(); i++) {
+            List<String> row = rows.get(i);
+            if (row.size() <= 3) {
+                continue;
+            }
+
+            String emailCell = row.get(3).trim();
+            if (email.equalsIgnoreCase(emailCell)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private String visibleRowsDump() {
+        List<List<String>> rows = tableData();
+
+        if (rows.isEmpty()) {
+            return "<sem linhas visíveis>";
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < rows.size(); i++) {
+            sb.append(i)
+                    .append(": ")
+                    .append(String.join(" | ", rows.get(i)))
+                    .append("\n");
+        }
+
+        return sb.toString().trim();
+    }
+
+    private void diagnosticDump(String prefix) {
+        try {
+            Path dir = Paths.get("target", "diagnostics");
+            Files.createDirectories(dir);
+
+            long ts = Instant.now().toEpochMilli();
+
+            Path png = dir.resolve(prefix + "_" + ts + ".png");
+            Path html = dir.resolve(prefix + "_" + ts + ".html");
+            Path txt = dir.resolve(prefix + "_" + ts + ".txt");
+
+            page.screenshot(new Page.ScreenshotOptions().setPath(png).setFullPage(true));
+            Files.writeString(html, page.content(), StandardCharsets.UTF_8);
+            Files.writeString(txt,
+                    "URL: " + page.url() + System.lineSeparator() +
+                            "TITLE: " + page.title() + System.lineSeparator() +
+                            "SEARCH VALUE: " + searchBox().inputValue() + System.lineSeparator() +
+                            "VISIBLE ROWS:" + System.lineSeparator() +
+                            visibleRowsDump(),
+                    StandardCharsets.UTF_8
+            );
+        } catch (Exception ignored) {
+        }
+    }
+
+    public Locator rowByEmail(String email) {
+        int idx = findRowIndexByEmail(email);
+        if (idx >= 0) {
+            return tableRows().nth(idx);
+        }
+        return page.locator(".__row-not-found__");
+    }
+
     public WebTablesPage openAddForm() {
         safeRemoveObstructions();
-        click(addButton());
+        addButton().scrollIntoViewIfNeeded();
+        addButton().click();
 
         modalContent().waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
@@ -100,27 +217,59 @@ public class WebTablesPage extends BasePage {
         ageInput().fill(String.valueOf(age));
         salaryInput().fill(String.valueOf(salary));
         departmentInput().fill(department);
+
+        assertThat(firstNameInput()).hasValue(firstName);
+        assertThat(lastNameInput()).hasValue(lastName);
+        assertThat(emailInput()).hasValue(email);
+        assertThat(ageInput()).hasValue(String.valueOf(age));
+        assertThat(salaryInput()).hasValue(String.valueOf(salary));
+        assertThat(departmentInput()).hasValue(department);
+
         return this;
     }
 
     public WebTablesPage submitForm() {
         safeRemoveObstructions();
-        click(submitButton());
 
+        submitButton().scrollIntoViewIfNeeded();
+        assertThat(submitButton()).isVisible();
+        assertThat(submitButton()).isEnabled();
+
+        submitButton().click();
+
+        boolean modalStillVisible;
         try {
             modalContent().waitFor(new Locator.WaitForOptions()
                     .setState(WaitForSelectorState.HIDDEN)
-                    .setTimeout(10_000));
+                    .setTimeout(5_000));
+            modalStillVisible = false;
         } catch (Exception ignored) {
-            modalContent().waitFor(new Locator.WaitForOptions()
-                    .setState(WaitForSelectorState.DETACHED)
-                    .setTimeout(10_000));
+            modalStillVisible = modalContent().isVisible();
         }
 
-        // espera o grid voltar ao estado interativo
-        searchBox().waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10_000));
+        if (modalStillVisible) {
+            Locator invalidFields = modalContent().locator("input:invalid");
+            int invalidCount = invalidFields.count();
+
+            if (invalidCount > 0) {
+                throw new AssertionError("O formulário permaneceu aberto após submit. Há "
+                        + invalidCount + " campo(s) inválido(s) no modal.");
+            }
+
+            submitButton().press("Enter");
+
+            try {
+                modalContent().waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.HIDDEN)
+                        .setTimeout(5_000));
+            } catch (Exception e) {
+                throw new AssertionError("O modal permaneceu aberto após clicar em Submit. "
+                        + "O submit não foi concluído ou o clique não foi efetivado.", e);
+            }
+        }
+
+        assertThat(searchBox()).isVisible();
+        assertThat(table()).isVisible();
 
         return this;
     }
@@ -139,30 +288,95 @@ public class WebTablesPage extends BasePage {
     }
 
     public WebTablesPage search(String text) {
+        searchBox().scrollIntoViewIfNeeded();
+        searchBox().click();
         searchBox().fill("");
-        searchBox().fill(text);
+        assertThat(searchBox()).hasValue("");
 
-        waitGridToReflectSearch(text, 10_000);
+        searchBox().fill(text);
+        assertThat(searchBox()).hasValue(text);
+
+        page.waitForTimeout(700);
 
         return this;
     }
 
-    private void waitGridToReflectSearch(String text, long timeoutMs) {
-        try {
-            page.waitForFunction(
-                    "({ email }) => {" +
-                            "  const body = document.querySelector('.rt-tbody');" +
-                            "  const noData = document.querySelector('.rt-noData');" +
-                            "  const bodyText = (body?.innerText || '').toLowerCase();" +
-                            "  const noDataText = (noData?.innerText || '').toLowerCase();" +
-                            "  return bodyText.includes(email.toLowerCase()) || noDataText.includes('no rows found');" +
-                            "}",
-                    Map.of("email", text),
-                    new Page.WaitForFunctionOptions().setTimeout(timeoutMs)
-            );
-        } catch (Exception ignored) {
-            // fallback leve: deixa o assert final do teste apontar a falha real
-            page.waitForTimeout(1000);
+    public WebTablesPage searchAndWaitByEmail(String email) {
+        search(email);
+
+        long deadline = System.currentTimeMillis() + 10_000;
+
+        while (System.currentTimeMillis() < deadline) {
+            int idx = findRowIndexByEmail(email);
+
+            if (idx >= 0) {
+                return this;
+            }
+
+            // se a tabela existir mas não houver linhas, pode ser filtro vazio
+            if (tableData().isEmpty()) {
+                page.waitForTimeout(250);
+                continue;
+            }
+
+            page.waitForTimeout(250);
         }
+
+        diagnosticDump("webtables_search_failed");
+
+        throw new AssertionError(
+                "A busca foi preenchida com o e-mail, mas a linha não foi localizada: " + email
+                        + "\nLinhas visíveis:\n" + visibleRowsDump()
+        );
+    }
+
+    public WebTablesPage assertRowMatches(
+            String email,
+            String firstName,
+            String lastName,
+            int age,
+            int salary,
+            String department
+    ) {
+        int idx = findRowIndexByEmail(email);
+        if (idx < 0) {
+            diagnosticDump("webtables_assert_row_missing");
+            throw new AssertionError(
+                    "Linha não encontrada para o e-mail: " + email
+                            + "\nLinhas visíveis:\n" + visibleRowsDump()
+            );
+        }
+
+        List<String> row = tableData().get(idx);
+
+        if (row.size() <= 5) {
+            diagnosticDump("webtables_row_incomplete");
+            throw new AssertionError(
+                    "A linha encontrada não possui colunas suficientes. Linha lida: " + row
+            );
+        }
+
+        assertThat(rowByEmail(email)).isVisible();
+
+        if (!row.get(0).equals(firstName)) {
+            throw new AssertionError("First Name divergente. Esperado: " + firstName + " | Atual: " + row.get(0));
+        }
+        if (!row.get(1).equals(lastName)) {
+            throw new AssertionError("Last Name divergente. Esperado: " + lastName + " | Atual: " + row.get(1));
+        }
+        if (!row.get(2).equals(String.valueOf(age))) {
+            throw new AssertionError("Age divergente. Esperado: " + age + " | Atual: " + row.get(2));
+        }
+        if (!row.get(3).equalsIgnoreCase(email)) {
+            throw new AssertionError("Email divergente. Esperado: " + email + " | Atual: " + row.get(3));
+        }
+        if (!row.get(4).equals(String.valueOf(salary))) {
+            throw new AssertionError("Salary divergente. Esperado: " + salary + " | Atual: " + row.get(4));
+        }
+        if (!row.get(5).equals(department)) {
+            throw new AssertionError("Department divergente. Esperado: " + department + " | Atual: " + row.get(5));
+        }
+
+        return this;
     }
 }

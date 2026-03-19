@@ -5,8 +5,9 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 import org.example.demoqa.pages.components.SideMenuComponent;
-
 import java.util.List;
+
+
 
 public class ElementsPage extends BasePage {
 

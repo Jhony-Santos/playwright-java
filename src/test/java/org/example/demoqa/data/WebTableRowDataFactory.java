@@ -5,10 +5,12 @@ import org.example.demoqa.data.models.WebTableRowData;
 public class WebTableRowDataFactory {
 
     public static WebTableRowData valid() {
+        long suffix = System.currentTimeMillis();
+
         return new WebTableRowData(
                 "Carlos",
                 "Silva",
-                "carlos.silva@example.com",
+                "carlos.silva." + suffix + "@example.com",
                 32,
                 8500,
                 "Engineering"
@@ -16,10 +18,12 @@ public class WebTableRowDataFactory {
     }
 
     public static WebTableRowData anotherValid() {
+        long suffix = System.currentTimeMillis();
+
         return new WebTableRowData(
                 "Julia",
                 "Souza",
-                "julia.souza@example.com",
+                "julia.souza." + suffix + "@example.com",
                 27,
                 9200,
                 "QA"
