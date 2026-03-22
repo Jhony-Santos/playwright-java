@@ -92,10 +92,11 @@ public class AlertsFrameWindowsPage extends BasePage {
         page.waitForURL("**/nestedframes", new Page.WaitForURLOptions().setTimeout(30_000));
 
         safeRemoveObstructions();
-        ensureAppIsUp(List.of("body", "iframe[srcdoc*='Parent frame']"), 60_000, true);
+        ensureAppIsUp(List.of("body", "#frame1"), 60_000, true);
 
         return new NestedFramesPage(page);
     }
+
 
     public ModalDialogsPage openModalDialogs() {
         page.navigate(BASE_URL + "modal-dialogs",
