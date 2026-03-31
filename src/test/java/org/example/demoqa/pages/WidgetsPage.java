@@ -101,4 +101,16 @@ public class WidgetsPage extends BasePage {
     }
 
 
+    public SelectMenuPage openSelectMenu() {
+        page.navigate("https://demoqa.com/select-menu",
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+        page.waitForURL("**/select-menu", new Page.WaitForURLOptions().setTimeout(30_000));
+
+        safeRemoveObstructions();
+        ensureAppIsUp(List.of("body", "#react-select-2-input", "#react-select-3-input", "#oldSelectMenu", "#react-select-4-input", "#cars"), 60_000, true);
+
+        return new SelectMenuPage(page).assertLoaded();
+    }
+
+
 }
