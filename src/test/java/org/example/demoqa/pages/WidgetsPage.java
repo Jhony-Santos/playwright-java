@@ -77,5 +77,28 @@ public class WidgetsPage extends BasePage {
     }
 
 
+    public ToolTipsPage openToolTips() {
+        page.navigate("https://demoqa.com/tool-tips",
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+        page.waitForURL("**/tool-tips", new Page.WaitForURLOptions().setTimeout(30_000));
+
+        safeRemoveObstructions();
+        ensureAppIsUp(List.of("body", "#toolTipButton", "#toolTipTextField"), 60_000, true);
+
+        return new ToolTipsPage(page).assertLoaded();
+    }
+
+
+    public MenuPage openMenu() {
+        page.navigate("https://demoqa.com/menu",
+                new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+        page.waitForURL("**/menu", new Page.WaitForURLOptions().setTimeout(30_000));
+
+        safeRemoveObstructions();
+        ensureAppIsUp(List.of("body"), 60_000, true);
+
+        return new MenuPage(page).assertLoaded();
+    }
+
 
 }
