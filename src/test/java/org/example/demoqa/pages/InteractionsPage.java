@@ -35,4 +35,34 @@ public class InteractionsPage extends BasePage {
         return new SelectablePage(page).assertLoaded();
     }
 
+
+    public ResizablePage openResizable() {
+        page.navigate("https://demoqa.com/resizable",
+                new Page.NavigateOptions().setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED));
+        page.waitForURL("**/resizable", new Page.WaitForURLOptions().setTimeout(30_000));
+
+        safeRemoveObstructions();
+        ensureAppIsUp(java.util.List.of("body", "#resizableBoxWithRestriction", "#resizable"), 60_000, true);
+
+        return new ResizablePage(page).assertLoaded();
+    }
+
+
+    public DroppablePage openDroppable() {
+        page.navigate("https://demoqa.com/droppable",
+                new Page.NavigateOptions().setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED));
+        page.waitForURL("**/droppable", new Page.WaitForURLOptions().setTimeout(30_000));
+
+        safeRemoveObstructions();
+        ensureAppIsUp(java.util.List.of("body", "#droppable"), 60_000, true);
+
+        return new DroppablePage(page).assertLoaded();
+    }
+
+
+
+
+
+
+
 }
