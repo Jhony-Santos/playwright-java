@@ -61,6 +61,19 @@ public class InteractionsPage extends BasePage {
 
 
 
+    public DraggablePage openDraggable() {
+        page.navigate("https://demoqa.com/dragabble",
+                new Page.NavigateOptions().setWaitUntil(com.microsoft.playwright.options.WaitUntilState.DOMCONTENTLOADED));
+        page.waitForURL("**/dragabble", new Page.WaitForURLOptions().setTimeout(30_000));
+
+        safeRemoveObstructions();
+        ensureAppIsUp(java.util.List.of("body", "#dragBox"), 60_000, true);
+
+        return new DraggablePage(page).assertLoaded();
+    }
+
+
+
 
 
 
