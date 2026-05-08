@@ -3,11 +3,13 @@ package org.example.demoqa;
 import com.microsoft.playwright.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+
+
+
 
 public class BaseTest {
 
@@ -19,10 +21,6 @@ public class BaseTest {
     protected final Path downloadsDir = Paths.get("target", "downloads");
     protected final Path diagnosticsDir = Paths.get("target", "diagnostics");
 
-    // Flags:
-    // -Dheadless=true|false
-    // -DdebugNet=true
-    // -DslowMo=500
     private static final boolean DEBUG_NET =
             Boolean.parseBoolean(System.getProperty("debugNet", "false"));
 
@@ -32,13 +30,15 @@ public class BaseTest {
     void setUp() throws Exception {
         playwright = Playwright.create();
 
-        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "true"));
-        double slowMo = Double.parseDouble(System.getProperty("slowMo", "0"));
+        boolean headless = Boolean.parseBoolean(System.getProperty("headless", "false"));
+        double slowMo = Double.parseDouble(System.getProperty("slowMo", "800"));
 
         List<String> chromiumArgs = List.of(
                 "--disable-gpu",
                 "--disable-dev-shm-usage",
-                "--no-sandbox"
+                "--no-sandbox",
+                "--start-maximized",
+                "--force-device-scale-factor=1"
         );
 
         browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
@@ -51,7 +51,7 @@ public class BaseTest {
 
         context = browser.newContext(new Browser.NewContextOptions()
                 .setAcceptDownloads(true)
-                .setViewportSize(1280, 720));
+                .setViewportSize(null));
 
         context.route("**/*", route -> {
             String url = route.request().url();
@@ -66,6 +66,8 @@ public class BaseTest {
         });
 
         page = context.newPage();
+
+        maximizeBrowserWindow();
 
         page.onConsoleMessage(msg -> {
             String type = msg.type();
@@ -116,6 +118,28 @@ public class BaseTest {
 
         page.setDefaultTimeout(45_000);
         page.setDefaultNavigationTimeout(45_000);
+    }
+
+    private void maximizeBrowserWindow() {
+        try {
+            CDPSession session = context.newCDPSession(page);
+
+            com.google.gson.JsonObject windowInfo = session.send("Browser.getWindowForTarget");
+            int windowId = windowInfo.get("windowId").getAsInt();
+
+            com.google.gson.JsonObject bounds = new com.google.gson.JsonObject();
+            bounds.addProperty("windowState", "maximized");
+
+            com.google.gson.JsonObject params = new com.google.gson.JsonObject();
+            params.addProperty("windowId", windowId);
+            params.add("bounds", bounds);
+
+            session.send("Browser.setWindowBounds", params);
+
+            page.waitForTimeout(500);
+        } catch (Exception e) {
+            System.out.println("[warn] Não foi possível maximizar a janela via CDP: " + e.getMessage());
+        }
     }
 
     @AfterEach

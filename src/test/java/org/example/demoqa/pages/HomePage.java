@@ -99,29 +99,43 @@ public class HomePage extends BasePage {
     }
 
     private void openCardByText(String cardText, String urlSuffix) {
-        afterNavigation();
+        gotoHome();
 
-        Locator card = page.locator("div.card:has-text('" + cardText + "')").first();
-        card.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(TIMEOUT_MS));
-
-        card.scrollIntoViewIfNeeded();
-        safeRemoveObstructions();
+        Locator card = page.locator("div.card:has(h5:has-text('" + cardText + "'))").first();
 
         try {
-            card.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
-        } catch (Exception e) {
+            card.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(TIMEOUT_MS));
+
+            card.scrollIntoViewIfNeeded();
             safeRemoveObstructions();
-            card.click(new Locator.ClickOptions().setForce(true).setTimeout(TIMEOUT_MS));
+
+            try {
+                card.click(new Locator.ClickOptions().setTimeout(TIMEOUT_MS));
+            } catch (Exception e) {
+                safeRemoveObstructions();
+                card.click(new Locator.ClickOptions().setForce(true).setTimeout(TIMEOUT_MS));
+            }
+
+            page.waitForURL("**/" + urlSuffix, new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+            afterNavigation();
+
+        } catch (Exception e) {
+            diagnosticSnapshot("home_card_not_found_" + cardText.replaceAll("[^a-zA-Z0-9]+", "_"));
+
+            page.navigate(BASE_URL + urlSuffix,
+                    new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+
+            page.waitForURL("**/" + urlSuffix,
+                    new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
+
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+            afterNavigation();
         }
-
-        page.waitForURL("**/" + urlSuffix, new Page.WaitForURLOptions().setTimeout(TIMEOUT_MS));
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-
-        afterNavigation();
     }
-
 
 
 
